@@ -58,7 +58,6 @@ type Kind = "category" | "author";
 interface BlogTaxonomyManagerProps {
   kind: Kind;
   initialItems: any[];
-  canManage: boolean;
 }
 
 interface FormState {
@@ -70,7 +69,7 @@ interface FormState {
   removeAvatar: boolean;
 }
 
-export default function BlogTaxonomyManager({ kind, initialItems, canManage }: BlogTaxonomyManagerProps) {
+export default function BlogTaxonomyManager({ kind, initialItems }: BlogTaxonomyManagerProps) {
   const router = useRouter();
   const [items, setItems] = useState<any[]>(initialItems);
   const [modalOpen, setModalOpen] = useState(false);
@@ -356,7 +355,7 @@ export default function BlogTaxonomyManager({ kind, initialItems, canManage }: B
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight break-words">{title}</h1>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
-          {canManage && (
+          {(
             <Button onClick={openAdd} className="h-10 px-4 w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-bold text-xs rounded-lg shadow-xs flex items-center justify-center gap-1.5">
               <Plus className="w-4 h-4" />
               <span>Add {isCategory ? "Category" : "Author"}</span>
@@ -516,7 +515,7 @@ export default function BlogTaxonomyManager({ kind, initialItems, canManage }: B
                 <span>Clear Filters</span>
               </Button>
             )}
-            {canManage && (
+            {(
               <Button onClick={openAdd} size="sm" className="bg-primary text-white hover:bg-primary/90 text-xs font-bold gap-1.5">
                 <Plus className="w-3.5 h-3.5" />
                 Add {isCategory ? "Category" : "Author"}
@@ -615,7 +614,7 @@ export default function BlogTaxonomyManager({ kind, initialItems, canManage }: B
                     )}
                   </div>
                   <div className="col-span-2 flex items-center justify-end gap-1.5">
-                    {canManage ? (
+                    {(
                       <>
                         <Button variant="ghost" size="icon" onClick={() => openEdit(item)} className="h-7 w-7 text-slate-600 hover:text-green-600 hover:bg-green-50" title="Edit">
                           <Pencil className="h-3.5 w-3.5" />
@@ -624,7 +623,6 @@ export default function BlogTaxonomyManager({ kind, initialItems, canManage }: B
                           kind={kind}
                           item={item}
                           onDeleted={async () => { await refresh(); }}
-                          disabled={!canManage}
                           trigger={
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50" title="Delete">
                               <Trash2 className="h-3.5 w-3.5" />
@@ -632,8 +630,6 @@ export default function BlogTaxonomyManager({ kind, initialItems, canManage }: B
                           }
                         />
                       </>
-                    ) : (
-                      <span className="text-[10px] font-medium text-slate-400">Read-only</span>
                     )}
                   </div>
                 </div>

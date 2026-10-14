@@ -154,10 +154,9 @@ const STEP_LABELS = ["Content", "Category & Authors", "Tags & Related", "SEO & P
 interface AddBlogModalProps {
   onAddBlog: (formData: FormData, seoData?: any) => Promise<boolean>;
   disabled?: boolean;
-  canPublish?: boolean;
 }
 
-export default function AddBlogModal({ onAddBlog, disabled = false, canPublish = false }: AddBlogModalProps) {
+export default function AddBlogModal({ onAddBlog, disabled = false }: AddBlogModalProps) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState(0);
@@ -1213,18 +1212,13 @@ export default function AddBlogModal({ onAddBlog, disabled = false, canPublish =
                         </p>
                       </div>
                     </div>
-                    {!canPublish && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-                        <Lock className="w-3 h-3" /> Publishing requires elevated privileges
-                      </span>
-                    )}
                   </div>
 
                   {/* 5-Status Cards Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-1">
                     {STATUS_CARDS.map((card) => {
                       const isSelected = status === card.key;
-                      const isLocked = !canPublish && (card.key === "published" || card.key === "scheduled");
+                      const isLocked = false;
                       const Icon = card.icon;
 
                       return (

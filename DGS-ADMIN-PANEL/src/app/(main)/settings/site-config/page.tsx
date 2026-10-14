@@ -5,9 +5,6 @@ export const revalidate = 0;
 
 export default async function SiteConfigPage() {
 
-  const hasManageAccess = true;
-  const canViewSeo = true;
-  const canManageSeo = true;
   const siteConfigResult = await getSiteConfigResult();
 
   // A failed fetch must not render as an empty settings form: every field would
@@ -33,9 +30,6 @@ export default async function SiteConfigPage() {
   return (
     <SettingsSiteConfigClient
       initialConfig={siteConfigResult.data}
-      hasManageAccess={hasManageAccess}
-      canViewSeo={canViewSeo}
-      canManageSeo={canManageSeo}
     />
   );
 }

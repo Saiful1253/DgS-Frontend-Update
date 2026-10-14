@@ -33,7 +33,6 @@ interface PortfolioDetailModalProps {
   onEdit: (item: PortfolioItem) => void;
   onToggleFeatured: (item: PortfolioItem) => void;
   featuredLoading?: boolean;
-  canManage: boolean;
 }
 
 export default function PortfolioDetailModal({
@@ -43,7 +42,6 @@ export default function PortfolioDetailModal({
   onEdit,
   onToggleFeatured,
   featuredLoading,
-  canManage,
 }: PortfolioDetailModalProps) {
   const [selectedPreviewImage, setSelectedPreviewImage] = useState<string | null>(null);
 
@@ -412,7 +410,7 @@ export default function PortfolioDetailModal({
                 </a>
               )}
 
-              {canManage && (
+              {(
                 <Button
                   variant="outline"
                   size="sm"
@@ -441,7 +439,7 @@ export default function PortfolioDetailModal({
                 </Button>
               )}
 
-              {canManage && (
+              {(
                 <Button
                   size="sm"
                   onClick={() => {

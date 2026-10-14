@@ -29,10 +29,9 @@ const tagUses = (t: any) => Number(t.usages ?? t.posts_count ?? 0);
 
 interface BlogTagsManagerProps {
   initialItems: any[];
-  canManage: boolean;
 }
 
-export default function BlogTagsManager({ initialItems, canManage }: BlogTagsManagerProps) {
+export default function BlogTagsManager({ initialItems }: BlogTagsManagerProps) {
   const router = useRouter();
   const [items, setItems] = useState<any[]>(initialItems);
   const [modalOpen, setModalOpen] = useState(false);
@@ -186,7 +185,7 @@ export default function BlogTagsManager({ initialItems, canManage }: BlogTagsMan
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight break-words">Blog Tags</h1>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
-          {canManage && (
+          {(
             <Button onClick={openAdd} className="h-10 px-4 w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-bold text-xs rounded-lg shadow-xs flex items-center justify-center gap-1.5">
               <Plus className="w-4 h-4" />
               <span>Add Tag</span>
@@ -346,7 +345,7 @@ export default function BlogTagsManager({ initialItems, canManage }: BlogTagsMan
                 <span>Clear Filters</span>
               </Button>
             )}
-            {canManage && (
+            {(
               <Button onClick={openAdd} size="sm" className="bg-primary text-white hover:bg-primary/90 text-xs font-bold gap-1.5">
                 <Plus className="w-3.5 h-3.5" />
                 Add Tag
@@ -382,7 +381,7 @@ export default function BlogTagsManager({ initialItems, canManage }: BlogTagsMan
                     </span>
                   </div>
                   <div className="col-span-3 flex items-center justify-end gap-1.5">
-                    {canManage ? (
+                    {(
                       <>
                         <Button variant="outline" size="sm" onClick={() => openEdit(tag)} className="h-7 px-2.5 text-[10px] font-semibold">
                           <Pencil className="w-3 h-3 mr-1" /> Rename
@@ -390,7 +389,6 @@ export default function BlogTagsManager({ initialItems, canManage }: BlogTagsMan
                         <DeleteTagDialog
                           tag={tag}
                           onDeleted={async () => { await refresh(); }}
-                          disabled={!canManage}
                           trigger={
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-50" title="Delete tag">
                               <Trash2 className="w-3.5 h-3.5" />
@@ -398,8 +396,6 @@ export default function BlogTagsManager({ initialItems, canManage }: BlogTagsMan
                           }
                         />
                       </>
-                    ) : (
-                      <span className="text-[10px] font-medium text-slate-400">Read-only</span>
                     )}
                   </div>
                 </div>

@@ -59,7 +59,6 @@ export interface ProductTableProps {
     updatedProduct: ProductInput & { id: string | number },
     imageFile?: File
   ) => Promise<void>;
-  hasManageAccess?: boolean;
 }
 
 export const ProductTable = ({
@@ -68,7 +67,6 @@ export const ProductTable = ({
   brands = [],
   warrantyPolicies = [],
   onProductUpdate,
-  hasManageAccess = false,
 }: ProductTableProps) => {
   const router = useRouter();
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
@@ -279,7 +277,7 @@ export const ProductTable = ({
                             ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50"
                             : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                         }`}
-                        disabled={!hasManageAccess || togglingFeaturedId === p.id}
+                        disabled={togglingFeaturedId === p.id}
                         onClick={() => handleFeaturedToggle(p.id, !!p.is_featured)}
                         title={p.is_featured ? "Remove from featured" : "Feature product"}
                       >
@@ -309,7 +307,7 @@ export const ProductTable = ({
                     {/* Status select */}
                     <TableCell className="py-2 px-3 text-center">
                       <Select
-                        disabled={!hasManageAccess || updatingStatusId === p.id}
+                        disabled={updatingStatusId === p.id}
                         value={p.status}
                         onValueChange={(value) => handleStatusChange(p.id, value)}
                       >
@@ -349,7 +347,6 @@ export const ProductTable = ({
                               variant="ghost"
                               className="p-2 h-auto hover:bg-gray-100 rounded"
                               aria-label="Edit product"
-                              disabled={!hasManageAccess}
                             >
                               <Edit size={15} />
                             </Button>
@@ -365,7 +362,6 @@ export const ProductTable = ({
                               variant="ghost"
                               className="p-2 h-auto hover:bg-red-50 text-red-600 rounded"
                               aria-label="Delete product"
-                              disabled={!hasManageAccess}
                             >
                               <Trash2 size={15} />
                             </Button>
@@ -787,7 +783,7 @@ export const ProductTable = ({
                       Close Details
                     </Button>
                   </DialogClose>
-                  {hasManageAccess && (
+                  {(
                     <Button
                       variant="default"
                       className="gap-2 px-5"

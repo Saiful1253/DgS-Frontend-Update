@@ -32,14 +32,12 @@ interface Props {
   categories: Category[];
   allCategories?: Category[];
   showStandaloneHeader?: boolean;
-  hasManageAccess?: boolean;
 }
 
 export default function CategoriesClient({
   categories,
   allCategories = [],
   showStandaloneHeader = true,
-  hasManageAccess = false,
 }: Props) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
@@ -158,7 +156,6 @@ export default function CategoriesClient({
               triggerLabel="Add category"
               onAdd={handleAdd}
               categories={allCategories}
-              disabled={!hasManageAccess}
             />
             <Button variant="outline" onClick={() => router.push("/products")}>
               Back to products
@@ -220,7 +217,7 @@ export default function CategoriesClient({
                     </TableCell>
                     <TableCell>
                       <Select
-                        disabled={!hasManageAccess || updatingStatusId === c.id}
+                        disabled={updatingStatusId === c.id}
                         value={c.status}
                         onValueChange={(value) => handleStatusChange(c.id, value)}
                       >
@@ -244,7 +241,6 @@ export default function CategoriesClient({
                               variant="ghost"
                               className="p-2 h-auto hover:bg-gray-100 rounded"
                               aria-label="Update category"
-                              disabled={!hasManageAccess}
                             >
                               <Edit size={16} />
                             </Button>
@@ -259,7 +255,6 @@ export default function CategoriesClient({
                               variant="ghost"
                               className="p-2 h-auto hover:bg-gray-100 rounded text-red-600"
                               aria-label="Delete category"
-                              disabled={!hasManageAccess}
                             >
                               <Trash2 size={16} />
                             </Button>

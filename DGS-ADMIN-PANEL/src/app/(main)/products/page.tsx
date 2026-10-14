@@ -15,8 +15,6 @@ export const metadata = {
 
 export default async function ProductsPage() {
 
-  const hasManageAccess = true;
-
   // One read per module, in parallel. A failure in any of them is a broken
   // screen, not an empty catalogue, so each is reported rather than defaulted to
   // an empty array.
@@ -60,7 +58,6 @@ export default async function ProductsPage() {
         initialProducts={products}
         categories={categoryResult.data}
         brands={brandResult.data}
-        hasManageAccess={hasManageAccess}
       />
     </div>
   );

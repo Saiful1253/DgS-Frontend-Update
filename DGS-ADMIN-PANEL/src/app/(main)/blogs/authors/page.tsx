@@ -7,10 +7,9 @@ export const revalidate = 0;
 
 export default async function BlogAuthorsPage() {
 
-  const canManage = true;
   const result = await getBlogAuthorsResult();
 
   if (!result.ok) return <LoadErrorPanel subject="blog authors" message={result.message} />;
 
-  return <BlogTaxonomyManager kind="author" initialItems={result.data} canManage={canManage} />;
+  return <BlogTaxonomyManager kind="author" initialItems={result.data} />;
 }

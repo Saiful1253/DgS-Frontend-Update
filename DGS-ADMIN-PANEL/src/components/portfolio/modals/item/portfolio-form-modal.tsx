@@ -76,7 +76,6 @@ export interface PortfolioFormModalProps {
   onCategoriesChange?: (categories: PortfolioCategory[]) => void;
   project?: PortfolioItem | null;
   onSuccess?: (savedProject: PortfolioItem) => void;
-  canManage: boolean;
 }
 
 export default function PortfolioFormModal({
@@ -86,7 +85,6 @@ export default function PortfolioFormModal({
   onCategoriesChange,
   project,
   onSuccess,
-  canManage,
 }: PortfolioFormModalProps) {
   const modalMode = project ? "edit" : "create";
 
@@ -1282,7 +1280,7 @@ export default function PortfolioFormModal({
             <Button
               type="button"
               onClick={handleSave}
-              disabled={saving || !canManage || !hasChanges}
+              disabled={saving || !hasChanges}
               className="bg-primary text-white hover:bg-primary/90 font-semibold"
             >
               <Save className="w-4 h-4 mr-1.5" />
@@ -1335,7 +1333,6 @@ export default function PortfolioFormModal({
         onOpenChange={setIsCategoryModalOpen}
         categories={categories}
         onCategoriesChange={(updated: any) => onCategoriesChange?.(updated)}
-        canManage={canManage}
       />
     </>
   );

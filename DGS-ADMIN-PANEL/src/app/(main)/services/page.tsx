@@ -24,8 +24,6 @@ export default async function ServicesPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
 
-  const hasManageAccess = true;
-
   const query = parseServiceSearchParams((await searchParams) ?? {});
 
   const [servicesResult, groupsResult, statsResult, pillarsResult] = await Promise.all([
@@ -49,7 +47,6 @@ export default async function ServicesPage({
       query={query}
       filtersActive={hasActiveServiceFilters(query)}
       pageSizeOptions={PAGE_SIZE_OPTIONS}
-      canManage={hasManageAccess}
     />
   );
 }

@@ -9,13 +9,11 @@ import { PortfolioCategory } from "@/types/portfolio";
 import PortfolioFormModal from "@/components/portfolio/modals/item/portfolio-form-modal";
 
 interface DashboardQuickActionsProps {
-  canManagePortfolio: boolean;
   categories: PortfolioCategory[];
   newLeadsBadge: string;
 }
 
 export default function DashboardQuickActions({
-  canManagePortfolio,
   categories,
   newLeadsBadge,
 }: DashboardQuickActionsProps) {
@@ -47,7 +45,7 @@ export default function DashboardQuickActions({
         </Button>
 
         {/* Action 2: Add Portfolio Item (Opens Modal Directly Over Dashboard) */}
-        {canManagePortfolio && (
+        {(
           <Button
             type="button"
             variant="outline"
@@ -78,7 +76,7 @@ export default function DashboardQuickActions({
       </div>
 
       {/* Add Portfolio Modal Over Dashboard */}
-      {canManagePortfolio && (
+      {(
         <PortfolioFormModal
           open={isAddPortfolioOpen}
           onOpenChange={setIsAddPortfolioOpen}
@@ -86,7 +84,6 @@ export default function DashboardQuickActions({
           onCategoriesChange={setActiveCategories}
           project={null}
           onSuccess={handlePortfolioCreated}
-          canManage={canManagePortfolio}
         />
       )}
     </>

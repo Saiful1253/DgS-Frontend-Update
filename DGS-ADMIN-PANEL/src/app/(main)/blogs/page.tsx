@@ -12,10 +12,6 @@ export const metadata = {
 
 export default async function BlogsPage() {
 
-  const hasManageAccess = true;
-
-  const hasPublishAccess = true;
-
   const blogResult = await getBlogsResult({ page: 1, limit: 100 });
 
   if (!blogResult.ok) return <LoadErrorPanel subject="blogs" message={blogResult.message} />;
@@ -23,8 +19,6 @@ export default async function BlogsPage() {
   return (
     <BlogsManager
       initialBlogs={blogResult.data.data}
-      canManage={hasManageAccess}
-      canPublish={hasPublishAccess}
     />
   );
 }

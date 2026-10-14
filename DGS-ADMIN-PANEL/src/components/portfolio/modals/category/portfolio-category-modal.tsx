@@ -50,7 +50,6 @@ interface PortfolioCategoryModalProps {
   onOpenChange: (open: boolean) => void;
   categories: PortfolioCategory[];
   onCategoriesChange: (categories: PortfolioCategory[]) => void;
-  canManage: boolean;
 }
 
 export default function PortfolioCategoryModal({
@@ -58,7 +57,6 @@ export default function PortfolioCategoryModal({
   onOpenChange,
   categories,
   onCategoriesChange,
-  canManage,
 }: PortfolioCategoryModalProps) {
   const router = useRouter();
   const [isAdding, setIsAdding] = useState(false);
@@ -245,7 +243,7 @@ export default function PortfolioCategoryModal({
                 </DialogDescription>
               </div>
 
-              {canManage && !isAdding && (
+              {!isAdding && (
                 <Button
                   size="sm"
                   onClick={() => setIsAdding(true)}
@@ -261,7 +259,7 @@ export default function PortfolioCategoryModal({
           {/* Body */}
           <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
             {/* Inline Add Category Option Form (Shown when Add button clicked) */}
-            {isAdding && canManage && (
+            {isAdding && (
               <form
                 onSubmit={handleAddCategory}
                 className="bg-sky-50/70 border border-primary/30 rounded-xl p-3.5 space-y-2.5 animate-in fade-in-50 duration-150"
@@ -391,7 +389,7 @@ export default function PortfolioCategoryModal({
                             </span>
                           </div>
 
-                          {canManage && (
+                          {(
                             <div className="flex items-center gap-1 shrink-0">
                               <Button
                                 size="sm"

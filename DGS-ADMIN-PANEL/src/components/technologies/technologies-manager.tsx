@@ -40,7 +40,6 @@ import DeleteTechnologyDialog from "./delete-technology-dialog";
 interface Props {
   initialTechnologies: Technology[];
   initialCategories?: TechnologyCategoryItem[];
-  canManage: boolean;
 }
 
 export type TechSortBy = "display_order" | "name" | "category" | "created_at";
@@ -48,7 +47,6 @@ export type TechSortBy = "display_order" | "name" | "category" | "created_at";
 export default function TechnologiesManager({
   initialTechnologies,
   initialCategories,
-  canManage,
 }: Props) {
   const router = useRouter();
 
@@ -246,7 +244,7 @@ export default function TechnologiesManager({
 
     setTechnologiesList(updatedAll);
 
-    if (canManage && !reordering) {
+    if (!reordering) {
       setReordering(true);
       const payload = toReorderPayload(updatedPage);
       const loadingToast = toast.loading("Saving new technology card order...");
@@ -276,7 +274,7 @@ export default function TechnologiesManager({
     );
     setTechnologiesList(updatedList);
 
-    if (canManage) {
+    {
       const loadingToast = toast.loading("Updating display order...");
       try {
         const res = await updateTechnology(technologyId, { display_order: newOrder });
@@ -323,7 +321,7 @@ export default function TechnologiesManager({
           </p>
         </div>
 
-        {canManage && (
+        {(
           <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
             <Button
               onClick={() => {
@@ -586,7 +584,7 @@ export default function TechnologiesManager({
               Clear Filters
             </Button>
           )}
-          {!hasActiveFilters && canManage && (
+          {!hasActiveFilters && (
             <Button
               size="sm"
               onClick={() => {
@@ -604,14 +602,12 @@ export default function TechnologiesManager({
           items={paginatedTechnologies}
           getKey={(t) => t.id}
           onReorder={handleReorder}
-          disabled={!canManage}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5 items-stretch"
         >
           {(t, { isDragging, isOver, rootProps, handleProps }) => (
             <TechnologyCard
               key={t.id}
               technology={t}
-              canManage={canManage}
               rootProps={rootProps}
               dragHandleProps={handleProps}
               onQuickOrderUpdate={handleQuickOrderUpdate}
@@ -646,7 +642,7 @@ export default function TechnologiesManager({
       )}
 
       {/* Modals */}
-      {canManage && (
+      {(
         <>
           <TechnologyFormModal
             open={formOpen}
@@ -678,7 +674,6 @@ export default function TechnologiesManager({
             onCategoriesChange={(updatedCategories) => {
               setDbCategories(updatedCategories);
             }}
-            canManage={canManage}
           />
           {deletingTech && (
             <DeleteTechnologyDialog

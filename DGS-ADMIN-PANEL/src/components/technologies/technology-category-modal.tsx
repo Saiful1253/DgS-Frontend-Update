@@ -49,7 +49,6 @@ interface TechnologyCategoryModalProps {
   onOpenChange: (open: boolean) => void;
   categories: TechnologyCategoryItem[];
   onCategoriesChange: (categories: TechnologyCategoryItem[]) => void;
-  canManage: boolean;
 }
 
 export default function TechnologyCategoryModal({
@@ -57,7 +56,6 @@ export default function TechnologyCategoryModal({
   onOpenChange,
   categories,
   onCategoriesChange,
-  canManage,
 }: TechnologyCategoryModalProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -250,7 +248,7 @@ export default function TechnologyCategoryModal({
                 </DialogDescription>
               </div>
 
-              {canManage && !isAdding && (
+              {!isAdding && (
                 <Button
                   size="sm"
                   onClick={() => setIsAdding(true)}
@@ -266,7 +264,7 @@ export default function TechnologyCategoryModal({
           {/* Body */}
           <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
             {/* Inline Add Category Option Form */}
-            {isAdding && canManage && (
+            {isAdding && (
               <form
                 onSubmit={handleAddCategory}
                 className="bg-sky-50/70 border border-[#00668a]/30 rounded-xl p-3.5 space-y-2.5 animate-in fade-in-50 duration-150"
@@ -398,7 +396,7 @@ export default function TechnologyCategoryModal({
                             </span>
                           </div>
 
-                          {canManage && (
+                          {(
                             <div className="flex items-center gap-1 shrink-0">
                               <Button
                                 size="sm"

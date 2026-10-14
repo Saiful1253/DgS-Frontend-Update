@@ -15,8 +15,6 @@ export const metadata = {
 
 export default async function TechnologiesPage() {
 
-  const hasManageAccess = true;
-
   const [techResult, catResult] = await Promise.all([
     getTechnologiesResult(),
     getTechnologyCategoriesResult(),
@@ -29,7 +27,6 @@ export default async function TechnologiesPage() {
     <TechnologiesManager
       initialTechnologies={techResult.data}
       initialCategories={catResult.data.data}
-      canManage={hasManageAccess}
     />
   );
 }

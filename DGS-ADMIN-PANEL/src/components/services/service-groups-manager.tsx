@@ -38,10 +38,9 @@ interface Props {
   groups: ServiceGroup[];
   services: Service[];
   pillars: PillarOptionSource[];
-  canManage: boolean;
 }
 
-export default function ServiceGroupsManager({ groups: initialGroups, services, pillars, canManage }: Props) {
+export default function ServiceGroupsManager({ groups: initialGroups, services, pillars }: Props) {
   const router = useRouter();
   const pillarOptions = toPillarOptions(pillars);
 
@@ -166,7 +165,7 @@ export default function ServiceGroupsManager({ groups: initialGroups, services, 
     const updatedList = assignSlotOrders(groupsList, newList);
     setGroupsList(updatedList);
 
-    if (canManage && !reordering) {
+    if (!reordering) {
       setReordering(true);
       const payload = toReorderPayload(updatedList);
 
@@ -207,7 +206,7 @@ export default function ServiceGroupsManager({ groups: initialGroups, services, 
     setGroupsList(updatedList);
     setEditingGroupId(null);
 
-    if (canManage) {
+    {
       const payload = [{ id: group.id, display_order: val }];
 
       const loadingToast = toast.loading("Updating service group order...");
@@ -252,7 +251,7 @@ export default function ServiceGroupsManager({ groups: initialGroups, services, 
           </h1>
         </div>
 
-        {canManage && (
+        {(
           <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
             <Button
               onClick={() => {
@@ -430,7 +429,6 @@ export default function ServiceGroupsManager({ groups: initialGroups, services, 
           items={paginatedGroups}
           getKey={(g) => g.id}
           onReorder={handleReorder}
-          disabled={!canManage}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch"
         >
           {(g, { isDragging, isOver, rootProps, handleProps }) => {
@@ -454,7 +452,7 @@ export default function ServiceGroupsManager({ groups: initialGroups, services, 
                 <div>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      {canManage && (
+                      {(
                         <div
                           {...handleProps}
                           title="Drag to reorder group"
@@ -478,7 +476,7 @@ export default function ServiceGroupsManager({ groups: initialGroups, services, 
                       </div>
                     </div>
 
-                    {canManage && (
+                    {(
                       <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
@@ -544,7 +542,7 @@ export default function ServiceGroupsManager({ groups: initialGroups, services, 
                     </Badge>
 
                     {/* Manual Display Order Adjustment */}
-                    {canManage ? (
+                    {(
                       editingGroupId === g.id ? (
                         <div className="flex items-center gap-1">
                           <Input
@@ -581,8 +579,6 @@ export default function ServiceGroupsManager({ groups: initialGroups, services, 
                           Order: <span className="font-bold font-mono">{g.display_order}</span>
                         </button>
                       )
-                    ) : (
-                      <span className="text-[11px]">Order: {g.display_order}</span>
                     )}
                   </div>
 
@@ -612,7 +608,7 @@ export default function ServiceGroupsManager({ groups: initialGroups, services, 
         />
       )}
 
-      {canManage && (
+      {(
         <>
           <CreateGroupModal
             open={createModalOpen}
@@ -645,8 +641,8 @@ export default function ServiceGroupsManager({ groups: initialGroups, services, 
         onOpenChange={setDetailsModalOpen}
         group={selectedGroup}
         assignedServices={selectedGroup ? services.filter((s) => s.group_id === selectedGroup.id) : []}
-        onEditClick={canManage ? () => setEditModalOpen(true) : undefined}
-        onDeleteClick={canManage ? () => setDeleteDialogOpen(true) : undefined}
+        onEditClick={() => setEditModalOpen(true)}
+        onDeleteClick={() => setDeleteDialogOpen(true)}
       />
     </div>
   );

@@ -14,8 +14,6 @@ export default async function DashboardOverviewPage() {
 
   // OR-logic: either dashboard code is enough to see the overview.
 
-  const canManagePortfolio = true;
-
   const [statsResult, categories] = await Promise.all([
     getDashboardStatsResult(),
     getPortfolioCategories().then((r) => r.data).catch(() => []),
@@ -214,7 +212,6 @@ export default async function DashboardOverviewPage() {
             QUICK ACTIONS
           </h2>
           <DashboardQuickActions
-            canManagePortfolio={canManagePortfolio}
             categories={categories}
             newLeadsBadge={newLeadsBadge}
           />

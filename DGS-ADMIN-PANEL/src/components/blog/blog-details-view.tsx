@@ -20,14 +20,10 @@ import { cn } from "@/lib/utils";
 
 interface BlogDetailsViewProps {
   blog: BlogPost;
-  hasManageAccess: boolean;
-  canPublish?: boolean;
 }
 
 export default function BlogDetailsView({
   blog,
-  hasManageAccess,
-  canPublish = false,
 }: BlogDetailsViewProps) {
   const router = useRouter();
   const [mounted, setMounted] = React.useState(false);
@@ -170,19 +166,14 @@ export default function BlogDetailsView({
                   </>
                 )}
                 <div className="w-1 h-1 bg-slate-300 rounded-full" />
-                {hasManageAccess ? (
+                {(
                   <BlogStatusMenu
                     status={currentStatus}
-                    canPublish={canPublish}
                     onSelect={handleStatusChange}
                     align="start"
                   />
-                ) : (
-                  <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border bg-slate-100 text-slate-700">
-                    {currentStatus}
-                  </span>
                 )}
-                {hasManageAccess && (
+                {(
                   <button
                     type="button"
                     onClick={handleToggleFeatured}
@@ -206,8 +197,6 @@ export default function BlogDetailsView({
                 <EditBlogModal
                   blog={blog}
                   onUpdateBlog={handleUpdate}
-                  disabled={!hasManageAccess}
-                  canPublish={canPublish}
                   trigger={
                     <Button variant="outline" size="sm" className="gap-1 font-semibold">
                       <Pencil size={12} />
@@ -218,7 +207,6 @@ export default function BlogDetailsView({
                 <DeleteBlogDialog
                   blog={blog}
                   redirectPath="/blogs"
-                  disabled={!hasManageAccess}
                   trigger={
                     <Button variant="destructive" size="sm">
                       <Trash2 size={12} />

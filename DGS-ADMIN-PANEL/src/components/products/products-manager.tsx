@@ -2,9 +2,8 @@
 
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, ShieldCheck } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { AppPagination } from "@/components/common/app-pagination";
 import type { Product } from "@/types/product/product";
 import type { Brand } from "@/types/product/brand";
@@ -22,7 +21,6 @@ interface Props {
   initialProducts: Product[];
   categories: Category[];
   brands: Brand[];
-  hasManageAccess?: boolean;
 }
 
 type Tab = "products" | "categories";
@@ -47,7 +45,6 @@ export default function ProductsManager({
   initialProducts,
   categories,
   brands,
-  hasManageAccess = false,
 }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("products");
@@ -177,7 +174,6 @@ export default function ProductsManager({
         <CategoriesClient
           categories={categories}
           allCategories={categories}
-          hasManageAccess={hasManageAccess}
         />
       ) : (
         <>
@@ -185,7 +181,7 @@ export default function ProductsManager({
             view={view}
             onViewChange={setView}
             rightActions={
-              hasManageAccess ? (
+              (
                 <AddProductModal
                   categories={categoryOptions}
                   brands={brandOptions}
@@ -197,11 +193,6 @@ export default function ProductsManager({
                     </Button>
                   }
                 />
-              ) : (
-                <Badge variant="secondary" className="text-xs gap-1 py-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
-                  Read-Only Access
-                </Badge>
               )
             }
           />
@@ -226,7 +217,6 @@ export default function ProductsManager({
               categories={categoryOptions}
               brands={brandOptions}
               onProductUpdate={handleProductUpdate}
-              hasManageAccess={hasManageAccess}
             />
           ) : (
             <ProductCards
@@ -234,7 +224,6 @@ export default function ProductsManager({
               categories={categoryOptions}
               brands={brandOptions}
               onProductUpdate={handleProductUpdate}
-              hasManageAccess={hasManageAccess}
             />
           )}
 

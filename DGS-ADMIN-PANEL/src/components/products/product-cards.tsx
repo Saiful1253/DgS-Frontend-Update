@@ -27,7 +27,6 @@ export interface ProductCardsProps {
   brands?: { id: string; name: string }[];
   warrantyPolicies?: { id: string | number; name: string; code: string }[];
   onProductUpdate?: (updated: ProductInput & { id: string | number }, imageFile?: File) => Promise<void>;
-  hasManageAccess?: boolean;
 }
 
 export default function ProductCards({
@@ -36,7 +35,6 @@ export default function ProductCards({
   brands = [],
   warrantyPolicies = [],
   onProductUpdate,
-  hasManageAccess = false,
 }: ProductCardsProps) {
   const router = useRouter();
   const [togglingFeaturedId, setTogglingFeaturedId] = useState<string | null>(null);
@@ -164,7 +162,7 @@ export default function ProductCards({
                   variant="ghost"
                   size="icon"
                   className={`h-7 w-7 ${p.is_featured ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
-                  disabled={!hasManageAccess || togglingFeaturedId === p.id}
+                  disabled={togglingFeaturedId === p.id}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleFeaturedToggle(p.id, !!p.is_featured);
@@ -188,7 +186,6 @@ export default function ProductCards({
                       size="icon"
                       className="h-7 w-7"
                       aria-label="Edit product"
-                      disabled={!hasManageAccess}
                     >
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
@@ -205,7 +202,6 @@ export default function ProductCards({
                       size="icon"
                       className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
                       aria-label="Delete product"
-                      disabled={!hasManageAccess}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -604,7 +600,7 @@ export default function ProductCards({
                 <DialogClose asChild>
                   <Button variant="outline" className="px-5">Close Details</Button>
                 </DialogClose>
-                {hasManageAccess && (
+                {(
                   <Button
                     variant="default"
                     className="gap-2 px-5"

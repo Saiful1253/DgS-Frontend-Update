@@ -16,20 +16,16 @@ import Link from "next/link";
 
 interface BlogCardProps {
   blog: BlogPost;
-  hasManageAccess: boolean;
   onUpdate: (id: string | number, formData: FormData) => Promise<boolean>;
   onDeleted?: () => void | Promise<void>;
-  canPublish?: boolean;
   onStatusChange?: (id: string | number, status: string, publishAt?: string) => Promise<boolean>;
   onToggleFeatured?: (id: string | number, nextFeatured: boolean) => Promise<boolean>;
 }
 
 export default function BlogCard({
   blog,
-  hasManageAccess,
   onUpdate,
   onDeleted,
-  canPublish = false,
   onStatusChange,
   onToggleFeatured,
 }: BlogCardProps) {
@@ -123,10 +119,9 @@ export default function BlogCard({
 
         {/* Status + Featured Badges */}
         <div className="absolute top-3 left-3 z-30 flex items-center gap-1.5 flex-wrap">
-          {hasManageAccess && onStatusChange ? (
+          {onStatusChange ? (
             <BlogStatusMenu
               status={blog.status}
-              canPublish={canPublish}
               onSelect={(s, at) => onStatusChange(blog.id, s, at)}
               triggerClassName="bg-white/95 backdrop-blur-md border-slate-200/90 shadow-sm"
               align="start"
@@ -136,7 +131,7 @@ export default function BlogCard({
               {blog.status}
             </span>
           )}
-          {hasManageAccess ? (
+          {(
             <button
               type="button"
               onClick={handleToggleFeatured}
@@ -152,11 +147,7 @@ export default function BlogCard({
               <Star className={cn("w-2.5 h-2.5", isFeatured ? "fill-white text-white" : "text-amber-500")} />
               <span>{isFeatured ? "Featured" : "Feature"}</span>
             </button>
-          ) : isFeatured ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 text-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider shadow-sm">
-              <Star className="w-2.5 h-2.5 fill-white" /> Featured
-            </span>
-          ) : null}
+          )}
           {showScheduledChip && (
             <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 text-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider shadow-sm">
               <Clock3 className="w-2.5 h-2.5" /> {format(new Date(blog.scheduled_at!), "MMM d, HH:mm")}
@@ -165,7 +156,7 @@ export default function BlogCard({
         </div>
 
         {/* Action Buttons Top-Right */}
-        {hasManageAccess && (
+        {(
           <div
             className="absolute top-3 right-3 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md rounded-lg p-1 border border-slate-200/70 shadow-sm"
             onClick={(e) => {
@@ -192,8 +183,6 @@ export default function BlogCard({
             <EditBlogModal
               blog={blog}
               onUpdateBlog={onUpdate}
-              disabled={!hasManageAccess}
-              canPublish={canPublish}
               trigger={
                 <Button
                   variant="ghost"
@@ -208,7 +197,6 @@ export default function BlogCard({
             <DeleteBlogDialog
               blog={blog}
               onDeleted={onDeleted}
-              disabled={!hasManageAccess}
               trigger={
                 <Button
                   variant="ghost"

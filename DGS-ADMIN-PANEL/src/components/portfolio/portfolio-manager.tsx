@@ -70,7 +70,6 @@ import PortfolioDetailModal from "./modals/item/portfolio-detail-modal";
 interface PortfolioManagerProps {
   initialPortfolios: PortfolioItem[];
   initialCategories?: PortfolioCategory[];
-  canManage: boolean;
   autoOpenCreate?: boolean;
 }
 
@@ -107,7 +106,6 @@ interface FormSnapshot {
 export default function PortfolioManager({
   initialPortfolios,
   initialCategories,
-  canManage,
   autoOpenCreate,
 }: PortfolioManagerProps) {
   const router = useRouter();
@@ -577,10 +575,10 @@ export default function PortfolioManager({
   };
 
   React.useEffect(() => {
-    if (autoOpenCreate && canManage) {
+    if (autoOpenCreate) {
       openCreateModal();
     }
-  }, [autoOpenCreate, canManage]);
+  }, [autoOpenCreate]);
 
   const openEditModal = (project: PortfolioItem) => {
     setModalMode("edit");
@@ -845,7 +843,6 @@ export default function PortfolioManager({
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <Button
             onClick={openCreateModal}
-            disabled={!canManage}
             className="h-10 px-4 w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-bold text-xs rounded-lg shadow-xs flex items-center justify-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
@@ -1058,7 +1055,7 @@ export default function PortfolioManager({
                 <span>Clear Filters</span>
               </Button>
             )}
-            {canManage && (
+            {(
               <Button onClick={openCreateModal} size="sm" className="bg-primary text-white hover:bg-primary/90">
                 <Plus className="w-4 h-4 mr-1.5" />
                 <span>Add Portfolio Project</span>
@@ -1210,7 +1207,7 @@ export default function PortfolioManager({
                       <span>Edit</span>
                     </Button>
 
-                    {canManage && (
+                    {(
                       <Button
                         variant="outline"
                         size="sm"
@@ -1241,7 +1238,7 @@ export default function PortfolioManager({
                       </Button>
                     )}
 
-                    {canManage && (
+                    {(
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1915,7 +1912,7 @@ export default function PortfolioManager({
             <Button
               type="button"
               onClick={handleSave}
-              disabled={saving || !canManage || !hasChanges}
+              disabled={saving || !hasChanges}
               className="bg-primary text-white hover:bg-primary/90 font-semibold"
             >
               <Save className="w-4 h-4 mr-1.5" />
@@ -1976,7 +1973,6 @@ export default function PortfolioManager({
           }
           setCategories(updatedCategories);
         }}
-        canManage={canManage}
       />
 
       {/* 9. Case Study Detailed View Modal */}
@@ -1987,7 +1983,6 @@ export default function PortfolioManager({
         onEdit={(item) => openEditModal(item)}
         onToggleFeatured={handleToggleFeatured}
         featuredLoading={featuredTogglingId === viewingDetailItem?.id}
-        canManage={canManage}
       />
     </div>
   );

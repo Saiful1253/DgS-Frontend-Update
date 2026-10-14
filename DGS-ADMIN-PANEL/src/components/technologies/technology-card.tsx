@@ -128,7 +128,6 @@ function getCategoryVisuals(category?: string) {
 
 interface Props {
   technology: Technology;
-  canManage: boolean;
   /** dnd-kit sortable props for the card root. */
   rootProps?: Record<string, unknown>;
   /** dnd-kit listeners for the grip only, so the card stays clickable. */
@@ -142,7 +141,6 @@ interface Props {
 
 export default function TechnologyCard({
   technology,
-  canManage,
   rootProps,
   dragHandleProps,
   onQuickOrderUpdate,
@@ -171,7 +169,7 @@ export default function TechnologyCard({
   }, [technology.display_order]);
 
   const handleToggleStatus = async (checked: boolean) => {
-    if (!canManage || updatingStatus) return;
+    if (updatingStatus) return;
     setUpdatingStatus(true);
     setIsActive(checked);
     try {
@@ -249,7 +247,7 @@ export default function TechnologyCard({
         <div className="space-y-2">
           {/* Top Row: Grip + Icon + (Title #ID on row 1, Category Badge on row 2) */}
           <div className="flex items-center gap-2.5 min-w-0">
-            {canManage && dragHandleProps && (
+            {dragHandleProps && (
               <div
                 {...dragHandleProps}
                 title="Drag to reorder card"
@@ -314,7 +312,7 @@ export default function TechnologyCard({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Manual Order Adjustment Control */}
-            {canManage ? (
+            {(
               isEditingOrder ? (
                 <div className="flex items-center gap-1">
                   <Input
@@ -350,10 +348,6 @@ export default function TechnologyCard({
                   Order: <span className="font-bold font-mono">{technology.display_order}</span>
                 </button>
               )
-            ) : (
-              <span className="text-[11px] font-medium text-slate-400">
-                Order: {technology.display_order}
-              </span>
             )}
           </div>
 
@@ -362,7 +356,7 @@ export default function TechnologyCard({
             className="flex items-center gap-1"
             onClick={(e) => e.stopPropagation()}
           >
-            {canManage && (
+            {(
               <div
                 className="flex items-center gap-1.5 mr-1"
                 title={isActive ? "Active technology" : "Inactive technology"}
@@ -385,7 +379,7 @@ export default function TechnologyCard({
               </div>
             )}
 
-            {canManage && (
+            {(
               <>
                 <Button
                   variant="ghost"
@@ -421,11 +415,11 @@ export default function TechnologyCard({
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
         technology={technology}
-        onEditClick={canManage ? () => onEdit?.(technology) : undefined}
-        onDeleteClick={canManage ? () => setDeleteOpen(true) : undefined}
+        onEditClick={() => onEdit?.(technology)}
+        onDeleteClick={() => setDeleteOpen(true)}
       />
 
-      {canManage && (
+      {(
         <DeleteTechnologyDialog
           technology={technology}
           open={deleteOpen}

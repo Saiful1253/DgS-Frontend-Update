@@ -152,7 +152,6 @@ interface EditBlogModalProps {
   onUpdateBlog: (id: string | number, formData: FormData) => Promise<boolean>;
   trigger?: React.ReactNode;
   disabled?: boolean;
-  canPublish?: boolean;
 }
 
 export default function EditBlogModal({
@@ -160,7 +159,6 @@ export default function EditBlogModal({
   onUpdateBlog,
   trigger,
   disabled = false,
-  canPublish = false,
 }: EditBlogModalProps) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -1257,18 +1255,13 @@ export default function EditBlogModal({
                       </p>
                     </div>
                   </div>
-                  {!canPublish && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-                      <Lock className="w-3 h-3" /> Publishing requires elevated privileges
-                    </span>
-                  )}
                 </div>
 
                 {/* 5-Status Cards Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-1">
                   {STATUS_CARDS.map((card) => {
                     const isSelected = status === card.key;
-                    const isLocked = !canPublish && (card.key === "published" || card.key === "scheduled");
+                    const isLocked = false;
                     const Icon = card.icon;
 
                     return (

@@ -35,14 +35,12 @@ interface Props {
   pillars?: ServicePillarEntity[];
   stats?: ServiceStats;
   groups?: ServiceGroup[];
-  canManage: boolean;
 }
 
 export default function ServicePillarsManager({
   pillars: initialPillars = [],
   stats = { total: 0, active: 0, inactive: 0, totalGroups: 0, byPillar: {}, byGroup: {} },
   groups = [],
-  canManage,
 }: Props) {
   const router = useRouter();
 
@@ -171,7 +169,7 @@ export default function ServicePillarsManager({
     const updatedList = assignSlotOrders(pillarsList, newList);
     setPillarsList(updatedList);
 
-    if (canManage && !reordering) {
+    if (!reordering) {
       setReordering(true);
       const payload = toReorderPayload(updatedList);
 
@@ -212,7 +210,7 @@ export default function ServicePillarsManager({
     setPillarsList(updatedList);
     setEditingPillarId(null);
 
-    if (canManage) {
+    {
       const payload = [{ id: pillar.id, display_order: val }];
 
       const loadingToast = toast.loading("Updating service pillar order...");
@@ -257,7 +255,7 @@ export default function ServicePillarsManager({
           </h1>
         </div>
 
-        {canManage && (
+        {(
           <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
             <Button
               onClick={() => {
@@ -432,7 +430,6 @@ export default function ServicePillarsManager({
           items={paginatedPillars}
           getKey={(p) => p.id}
           onReorder={handleReorder}
-          disabled={!canManage}
           className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start"
         >
           {(p, { isDragging, isOver, rootProps, handleProps }) => {
@@ -454,7 +451,7 @@ export default function ServicePillarsManager({
                 <div>
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                     <div className="flex items-center gap-2.5">
-                      {canManage && (
+                      {(
                         <div
                           {...handleProps}
                           title="Drag to reorder pillar"
@@ -487,7 +484,7 @@ export default function ServicePillarsManager({
                         {p.is_active ? "Active" : "Inactive"}
                       </Badge>
 
-                      {canManage && (
+                      {(
                         <div className="flex items-center gap-1 shrink-0">
                           <Button
                             variant="ghost"
@@ -552,7 +549,7 @@ export default function ServicePillarsManager({
 
                 <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
                   {/* Manual Display Order Adjustment */}
-                  {canManage ? (
+                  {(
                     editingPillarId === p.id ? (
                       <div className="flex items-center gap-1">
                         <Input
@@ -589,8 +586,6 @@ export default function ServicePillarsManager({
                         Order: <span className="font-bold font-mono">{p.display_order}</span>
                       </button>
                     )
-                  ) : (
-                    <span>Display Order: {p.display_order}</span>
                   )}
 
                   <span>ID: #{p.id}</span>
@@ -619,7 +614,7 @@ export default function ServicePillarsManager({
         />
       )}
 
-      {canManage && (
+      {(
         <>
           <CreatePillarModal
             open={createModalOpen}

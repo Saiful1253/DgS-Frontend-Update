@@ -30,13 +30,11 @@ import HeroCard from "./hero-card";
 
 interface HeroManagerProps {
   initialHeroes: HeroSection[];
-  canManage: boolean;
   autoOpenCreate?: boolean;
 }
 
 export default function HeroManager({
   initialHeroes,
-  canManage,
 }: HeroManagerProps) {
   const router = useRouter();
   const [heroes, setHeroes] = useState<HeroSection[]>(initialHeroes);
@@ -380,7 +378,7 @@ export default function HeroManager({
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <AddHeroModal onAddHero={handleAddHero} disabled={!canManage} />
+          <AddHeroModal onAddHero={handleAddHero} />
         </div>
       </div>
 
@@ -557,8 +555,8 @@ export default function HeroManager({
                 <span>Clear Filters</span>
               </Button>
             )}
-            {canManage && (
-              <AddHeroModal onAddHero={handleAddHero} disabled={!canManage} />
+            {(
+              <AddHeroModal onAddHero={handleAddHero} />
             )}
           </div>
         </div>
@@ -569,7 +567,6 @@ export default function HeroManager({
               <HeroCard
                 key={hero.id}
                 hero={hero}
-                hasManageAccess={canManage}
                 onUpdate={handleHeroUpdate}
                 onDeleted={async () => {
                   setHeroes((prev) => prev.filter((h) => h.id !== hero.id));

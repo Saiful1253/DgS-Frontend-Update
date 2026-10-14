@@ -1,4 +1,3 @@
- 
 "use client";
 
 import React, { useState } from "react";
@@ -10,23 +9,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Edit2, UploadCloud, Globe, Phone, Mail, MapPin, MessageSquare, Facebook, Instagram, Twitter, FileText, ShieldAlert, Search, ShieldCheck } from "lucide-react";
+import { Edit2, UploadCloud, Globe, Phone, Mail, MapPin, MessageSquare, Facebook, Instagram, Twitter, FileText, ShieldAlert, Search } from "lucide-react";
 import Image from "next/image";
 import { siteConfigValidationSchema } from "@/zod/site-config.validation";
 import { Badge } from "@/components/ui/badge";
 
 interface Props {
   initialConfig: SiteConfig;
-  hasManageAccess?: boolean;
-  canViewSeo?: boolean;
-  canManageSeo?: boolean;
 }
 
 export default function SettingsSiteConfigClient({
   initialConfig,
-  hasManageAccess = true,
-  canViewSeo = true,
-  canManageSeo = true,
 }: Props) {
   const [config, setConfig] = useState<SiteConfig>(initialConfig);
   const [isOpen, setIsOpen] = useState(false);
@@ -39,7 +32,6 @@ export default function SettingsSiteConfigClient({
   const [formState, setFormState] = useState<SiteConfig>({ ...initialConfig });
 
   const handleOpenModal = () => {
-    if (!hasManageAccess) return;
     setFormState({ ...config });
     setTempLogoFile(null);
     setTempLogoUrl("");
@@ -48,7 +40,6 @@ export default function SettingsSiteConfigClient({
   };
 
   const handleFieldChange = (key: keyof SiteConfig, value: string) => {
-    if (!hasManageAccess) return;
     setFormState((prev) => ({ ...prev, [key]: value }));
     if (fieldErrors[key]) {
       setFieldErrors((prev) => {
@@ -60,7 +51,6 @@ export default function SettingsSiteConfigClient({
   };
 
   const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!hasManageAccess) return;
     const file = e.target.files?.[0];
     if (!file) return;
     setTempLogoFile(file);
@@ -68,7 +58,6 @@ export default function SettingsSiteConfigClient({
   };
 
   const handleSave = async () => {
-    if (!hasManageAccess) return;
     // Client-side Zod validation
     const validation = siteConfigValidationSchema.safeParse(formState);
     if (!validation.success) {
@@ -129,7 +118,6 @@ export default function SettingsSiteConfigClient({
         </div>
         <Button 
           onClick={handleOpenModal} 
-          disabled={!hasManageAccess} 
           variant="secondary" 
           className="font-bold uppercase text-xs h-10 px-8 shadow-sm"
         >
@@ -327,7 +315,7 @@ export default function SettingsSiteConfigClient({
         </div>
 
         {/* SEO Defaults Section */}
-        {canViewSeo && (
+        {(
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex-1 flex flex-col justify-start space-y-6">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
@@ -339,12 +327,6 @@ export default function SettingsSiteConfigClient({
                   Metadata
                 </Badge>
               </div>
-              {!canManageSeo && (
-                <Badge variant="secondary" className="text-[10px] gap-1 py-0.5">
-                  <ShieldCheck className="w-3 h-3 text-slate-500" />
-                  Read-Only
-                </Badge>
-              )}
             </div>
             <div className="grid grid-cols-1 gap-5">
               <div className="flex items-start gap-3">
@@ -411,7 +393,7 @@ export default function SettingsSiteConfigClient({
     </div>
 
       {/* Edit Dialog Modal */}
-      <Dialog open={isOpen} onOpenChange={(v) => hasManageAccess && setIsOpen(v)}>
+      <Dialog open={isOpen} onOpenChange={(v) => setIsOpen(v)}>
         <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-white rounded-2xl shadow-xl border border-slate-250">
           <DialogHeader className="p-6 border-b shrink-0">
             <DialogTitle className="text-lg font-bold uppercase tracking-wide text-slate-800">Edit Site Configuration</DialogTitle>
@@ -526,8 +508,7 @@ export default function SettingsSiteConfigClient({
                   <span className="text-[10px] text-red-500 font-bold uppercase mt-1 block">{fieldErrors.footer_text}</span>
                 )}
               </div>
-              
-              {canViewSeo && (
+              {(
                 <>
                   <div className="col-span-full border-t pt-4 mt-2">
                     <div className="flex items-center justify-between mb-4">
@@ -535,12 +516,6 @@ export default function SettingsSiteConfigClient({
                         <Search className="size-4 text-primary" />
                         SEO & Search Engine Indexing
                       </h4>
-                      {!canManageSeo && (
-                        <Badge variant="secondary" className="text-[10px] gap-1 py-0.5">
-                          <ShieldCheck className="w-3 h-3 text-slate-500" />
-                          Read-Only (seo.seo.manage required)
-                        </Badge>
-                      )}
                     </div>
                   </div>
                   <div className="col-span-full">
@@ -549,7 +524,6 @@ export default function SettingsSiteConfigClient({
                       placeholder={formState.company_name || "MilanoVA Technologies"}
                       value={formState.site_meta_title ?? ""}
                       onChange={(e) => handleFieldChange("site_meta_title", e.target.value)}
-                      disabled={!canManageSeo}
                       className="h-10"
                     />
                     <p className="text-[10px] text-slate-400 mt-1">If left empty, the company name will be used.</p>
@@ -560,7 +534,6 @@ export default function SettingsSiteConfigClient({
                       placeholder={formState.company_short_description || "Short description..."}
                       value={formState.site_meta_description ?? ""}
                       onChange={(e) => handleFieldChange("site_meta_description", e.target.value)}
-                      disabled={!canManageSeo}
                       className="min-h-20"
                     />
                     <p className="text-[10px] text-slate-400 mt-1">If left empty, the company short description will be used.</p>
@@ -571,7 +544,6 @@ export default function SettingsSiteConfigClient({
                       placeholder="https://milanovatech.com"
                       value={formState.canonical_url ?? ""}
                       onChange={(e) => handleFieldChange("canonical_url", e.target.value)}
-                      disabled={!canManageSeo}
                       className="h-10"
                     />
                     {fieldErrors.canonical_url && (
@@ -583,7 +555,6 @@ export default function SettingsSiteConfigClient({
                     <Input
                       value={formState.site_meta_keywords ?? ""}
                       onChange={(e) => handleFieldChange("site_meta_keywords", e.target.value)}
-                      disabled={!canManageSeo}
                       className="h-10"
                     />
                   </div>
@@ -593,7 +564,6 @@ export default function SettingsSiteConfigClient({
                       placeholder={formState.company_logo || "/images/og-image.webp"}
                       value={formState.site_og_image ?? ""}
                       onChange={(e) => handleFieldChange("site_og_image", e.target.value)}
-                      disabled={!canManageSeo}
                       className="h-10"
                     />
                     <p className="text-[10px] text-slate-400 mt-1">If left empty, the company logo will be used by default.</p>

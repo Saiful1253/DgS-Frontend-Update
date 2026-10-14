@@ -26,11 +26,9 @@ import BlogCard from "./blog-card";
 
 interface BlogsManagerProps {
   initialBlogs: BlogPost[];
-  canManage: boolean;
-  canPublish?: boolean;
 }
 
-export default function BlogsManager({ initialBlogs, canManage, canPublish = false }: BlogsManagerProps) {
+export default function BlogsManager({ initialBlogs }: BlogsManagerProps) {
   const router = useRouter();
   const [blogs, setBlogs] = useState<BlogPost[]>(initialBlogs);
   const [busy, setBusy] = useState(false);
@@ -230,7 +228,7 @@ export default function BlogsManager({ initialBlogs, canManage, canPublish = fal
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
-          <AddBlogModal onAddBlog={handleAddBlog} disabled={!canManage} canPublish={canPublish} />
+          <AddBlogModal onAddBlog={handleAddBlog} />
         </div>
       </div>
 
@@ -405,8 +403,8 @@ export default function BlogsManager({ initialBlogs, canManage, canPublish = fal
                 <span>Clear Filters</span>
               </Button>
             )}
-            {canManage && (
-              <AddBlogModal onAddBlog={handleAddBlog} disabled={!canManage} canPublish={canPublish} />
+            {(
+              <AddBlogModal onAddBlog={handleAddBlog} />
             )}
           </div>
         </div>
@@ -417,8 +415,6 @@ export default function BlogsManager({ initialBlogs, canManage, canPublish = fal
               <BlogCard
                 key={blog.id}
                 blog={blog}
-                hasManageAccess={canManage}
-                canPublish={canPublish}
                 onUpdate={handleUpdateBlog}
                 onStatusChange={handleStatusChange}
                 onToggleFeatured={handleToggleFeatured}

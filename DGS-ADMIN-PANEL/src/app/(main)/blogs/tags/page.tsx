@@ -7,10 +7,9 @@ export const revalidate = 0;
 
 export default async function BlogTagsPage() {
 
-  const canManage = true;
   const result = await getBlogTagsResult();
 
   if (!result.ok) return <LoadErrorPanel subject="blog tags" message={result.message} />;
 
-  return <BlogTagsManager initialItems={result.data} canManage={canManage} />;
+  return <BlogTagsManager initialItems={result.data} />;
 }

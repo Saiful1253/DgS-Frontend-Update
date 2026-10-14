@@ -49,7 +49,6 @@ export const STATUS_LABELS: Record<string, string> = {
 interface BlogStatusMenuProps {
   status: string;
   disabled?: boolean;
-  canPublish?: boolean;
   onSelect: (status: string, publishAt?: string) => Promise<boolean> | boolean | void;
   className?: string;
   triggerClassName?: string;
@@ -60,7 +59,6 @@ interface BlogStatusMenuProps {
 export default function BlogStatusMenu({
   status,
   disabled = false,
-  canPublish = true,
   onSelect,
   triggerClassName,
   labelClassName,
@@ -132,7 +130,7 @@ export default function BlogStatusMenu({
           <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Change status
           </DropdownMenuLabel>
-          {BLOG_STATUSES.filter((s) => canPublish || (s !== "published" && s !== "scheduled")).map((s) => (
+          {BLOG_STATUSES.map((s) => (
             <DropdownMenuItem
               key={s}
               disabled={disabled || s === status}

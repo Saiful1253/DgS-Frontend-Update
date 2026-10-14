@@ -22,8 +22,6 @@ export default async function PortfolioPage({
   const shouldAutoOpen =
     resolvedParams?.action === "create" || resolvedParams?.create === "true";
 
-  const hasManageAccess = true;
-
   const [portfoliosResult, categoriesResult] = await Promise.all([
     getPortfoliosResult(),
     getPortfolioCategoriesResult(),
@@ -53,7 +51,6 @@ export default async function PortfolioPage({
     <PortfolioManager
       initialPortfolios={portfoliosResult.data}
       initialCategories={categoriesResult.data.data}
-      canManage={hasManageAccess}
       autoOpenCreate={shouldAutoOpen}
     />
   );

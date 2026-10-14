@@ -29,7 +29,6 @@ import { cn } from "@/lib/utils";
 interface Props {
   service: Service;
   groups: ServiceGroup[];
-  canManage: boolean;
   /** dnd-kit sortable props for the card root. */
   rootProps?: Record<string, unknown>;
   /** dnd-kit listeners for the grip only, so the card stays clickable. */
@@ -43,7 +42,6 @@ interface Props {
 export default function ServiceCard({
   service,
   groups,
-  canManage,
   rootProps,
   dragHandleProps,
   onQuickOrderUpdate,
@@ -73,7 +71,7 @@ export default function ServiceCard({
     : null;
 
   const handleToggleStatus = async (checked: boolean) => {
-    if (!canManage || updatingStatus) return;
+    if (updatingStatus) return;
     setUpdatingStatus(true);
     setIsActive(checked);
     try {
@@ -149,7 +147,7 @@ export default function ServiceCard({
       <div>
         <div className="flex items-start justify-between gap-2 min-w-0">
           <div className="flex items-start gap-2 min-w-0 flex-1">
-            {canManage && dragHandleProps && (
+            {dragHandleProps && (
               <div
                 {...dragHandleProps}
                 title="Drag to reorder card"
@@ -178,7 +176,7 @@ export default function ServiceCard({
           </div>
 
           <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 ml-1" onClick={(e) => e.stopPropagation()}>
-            {canManage && (
+            {(
               <div className="flex items-center mr-0.5" title={isActive ? "Active service" : "Inactive service"}>
                 <Switch
                   checked={isActive}
@@ -189,7 +187,7 @@ export default function ServiceCard({
               </div>
             )}
 
-            {canManage && (
+            {(
               <>
                 <Button
                   variant="ghost"
@@ -255,7 +253,7 @@ export default function ServiceCard({
       <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
         <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
           {/* Manual Order Adjustment Control */}
-          {canManage ? (
+          {(
             isEditingOrder ? (
               <div className="flex items-center gap-1">
                 <Input
@@ -291,8 +289,6 @@ export default function ServiceCard({
                 Order: <span className="font-bold font-mono">{service.display_order}</span>
               </button>
             )
-          ) : (
-            <span className="text-[11px] font-medium text-slate-400">Order: {service.display_order}</span>
           )}
 
           {/* Creation date */}
@@ -320,11 +316,11 @@ export default function ServiceCard({
       open={detailsOpen}
       onOpenChange={setDetailsOpen}
       service={service}
-      onEditClick={canManage ? () => setEditOpen(true) : undefined}
-      onDeleteClick={canManage ? () => setDeleteOpen(true) : undefined}
+      onEditClick={() => setEditOpen(true)}
+      onDeleteClick={() => setDeleteOpen(true)}
     />
 
-    {canManage && (
+    {(
       <>
         <EditServiceModal
           open={editOpen}

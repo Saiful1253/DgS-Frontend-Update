@@ -7,10 +7,9 @@ export const revalidate = 0;
 
 export default async function BlogCategoriesPage() {
 
-  const canManage = true;
   const result = await getBlogCategoriesResult();
 
   if (!result.ok) return <LoadErrorPanel subject="blog categories" message={result.message} />;
 
-  return <BlogTaxonomyManager kind="category" initialItems={result.data} canManage={canManage} />;
+  return <BlogTaxonomyManager kind="category" initialItems={result.data} />;
 }

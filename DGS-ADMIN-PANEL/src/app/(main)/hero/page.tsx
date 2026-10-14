@@ -18,8 +18,6 @@ export default async function HeroPage({
   const shouldAutoOpen =
     resolvedParams?.action === "create" || resolvedParams?.create === "true";
 
-  const hasManageAccess = true;
-
   const heroResult = await getHeroesResult({ page: 1, limit: 100 });
 
   // A failed fetch must not render as an empty carousel. The previous
@@ -44,7 +42,6 @@ export default async function HeroPage({
   return (
     <HeroManager
       initialHeroes={heroResult.data.data}
-      canManage={hasManageAccess}
       autoOpenCreate={shouldAutoOpen}
     />
   );

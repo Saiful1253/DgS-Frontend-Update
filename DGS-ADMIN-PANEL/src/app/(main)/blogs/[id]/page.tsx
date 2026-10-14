@@ -15,8 +15,6 @@ export const revalidate = 0;
 export default async function BlogDetailsPage({ params }: BlogDetailsPageProps) {
   const { id } = await params;
 
-  const hasManageAccess = true;
-  const hasPublishAccess = true;
   const blogResult = await getBlogResult(id);
 
   if (!blogResult.ok) return <LoadErrorPanel subject="this blog" message={blogResult.message} />;
@@ -46,8 +44,6 @@ export default async function BlogDetailsPage({ params }: BlogDetailsPageProps) 
   return (
     <BlogDetailsView
       blog={blog}
-      hasManageAccess={hasManageAccess}
-      canPublish={hasPublishAccess}
     />
   );
 }

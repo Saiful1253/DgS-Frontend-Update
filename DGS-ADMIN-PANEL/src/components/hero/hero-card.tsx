@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 
 interface HeroCardProps {
   hero: HeroSection;
-  hasManageAccess: boolean;
   onUpdate: (id: string | number, data: any, ops: HeroImageOps) => Promise<boolean>;
   onDeleted?: () => void | Promise<void>;
   cardHeight?: number;
@@ -235,7 +234,7 @@ function YouTubeSlide({
 
 
 // ─── Main Hero Card ───────────────────────────────────────────────────────
-export default function HeroCard({ hero, hasManageAccess, onUpdate, onDeleted, cardHeight, onMeasureHeight }: HeroCardProps) {
+export default function HeroCard({ hero, onUpdate, onDeleted, cardHeight, onMeasureHeight }: HeroCardProps) {
   const swiperRef = useRef<any>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -424,7 +423,6 @@ export default function HeroCard({ hero, hasManageAccess, onUpdate, onDeleted, c
             <button
               key={s}
               onClick={(e) => handleStatusChange(e, s)}
-              disabled={!hasManageAccess}
               title={s === "active" ? "Active (exclusive)" : s.charAt(0).toUpperCase() + s.slice(1)}
               className={cn(
                 "px-1.5 sm:px-2.5 py-0.5 rounded-full text-[7px] sm:text-[8px] font-extrabold uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer",
@@ -447,7 +445,6 @@ export default function HeroCard({ hero, hasManageAccess, onUpdate, onDeleted, c
           <EditHeroModal
             hero={hero}
             onSave={(data, ops) => onUpdate(hero.id, data, ops)}
-            disabled={!hasManageAccess}
             trigger={
               <Button variant="ghost" size="icon" className="h-6 w-6 text-white/80 hover:text-green-400 hover:bg-white/10 rounded-lg">
                 <Pencil size={12} />
@@ -457,7 +454,6 @@ export default function HeroCard({ hero, hasManageAccess, onUpdate, onDeleted, c
           <DeleteHeroDialog
             hero={hero}
             onDeleted={onDeleted}
-            disabled={!hasManageAccess}
             trigger={
               <Button variant="ghost" size="icon" className="h-6 w-6 text-white/80 hover:text-red-400 hover:bg-white/10 rounded-lg">
                 <Trash2 size={12} />

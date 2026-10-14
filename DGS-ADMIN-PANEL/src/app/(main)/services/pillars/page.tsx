@@ -16,8 +16,6 @@ export const metadata = {
 
 export default async function ServicePillarsPage() {
 
-  const hasManageAccess = true;
-
   const [pillarsResult, statsResult, groupsResult] = await Promise.all([
     getServicePillarsResult(),
     getServiceStatsResult(),
@@ -33,7 +31,6 @@ export default async function ServicePillarsPage() {
       pillars={pillarsResult.data}
       stats={statsResult.data}
       groups={groupsResult.data}
-      canManage={hasManageAccess}
     />
   );
 }

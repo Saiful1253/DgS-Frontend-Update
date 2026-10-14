@@ -1,5 +1,5 @@
 import React from "react";
-import { MessageSquare, Plus, ShieldCheck, Star,  Quote } from "lucide-react";
+import { MessageSquare, Plus, Star, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -11,8 +11,6 @@ export const metadata = {
 };
 
 export default async function TestimonialsPage() {
-
-  const hasManageAccess = true;
 
   return (
     <div className="w-full space-y-6">
@@ -34,16 +32,11 @@ export default async function TestimonialsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {hasManageAccess ? (
+          {(
             <Button size="sm" className="gap-1.5 h-9 bg-primary text-white hover:bg-primary/90">
               <Plus className="w-4 h-4" />
               <span>Add Testimonial</span>
             </Button>
-          ) : (
-            <Badge variant="secondary" className="text-xs gap-1 py-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
-              Read-Only Access
-            </Badge>
           )}
         </div>
       </div>

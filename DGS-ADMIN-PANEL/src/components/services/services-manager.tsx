@@ -37,7 +37,6 @@ interface Props {
   query: ServiceQueryParams;
   filtersActive: boolean;
   pageSizeOptions: number[];
-  canManage: boolean;
 }
 
 export default function ServicesManager({
@@ -47,7 +46,6 @@ export default function ServicesManager({
   initialStats,
   query,
   pageSizeOptions,
-  canManage,
 }: Props) {
   const router = useRouter();
 
@@ -242,7 +240,7 @@ export default function ServicesManager({
     setServicesList(updatedList);
 
     // Commit reorder to backend
-    if (canManage && !reordering) {
+    if (!reordering) {
       setReordering(true);
       const payload = toReorderPayload(updatedList);
 
@@ -270,7 +268,7 @@ export default function ServicesManager({
     );
     setServicesList(updatedList);
 
-    if (canManage) {
+    {
       // Only the edited row is sent: the rest of the page already holds the
       // value it wants, and rewriting them all would push page-local orders
       // onto rows the admin never touched.
@@ -306,7 +304,7 @@ export default function ServicesManager({
           </h1>
         </div>
 
-        {canManage && (
+        {(
           <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
             <Button
               onClick={() => setAddServiceOpen(true)}
@@ -592,14 +590,12 @@ export default function ServicesManager({
           items={sortedServices}
           getKey={(s) => s.id}
           onReorder={handleReorder}
-          disabled={!canManage}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch"
         >
           {(s, { isDragging, isOver, rootProps, handleProps }) => (
             <ServiceCard
               service={s}
               groups={groups}
-              canManage={canManage}
               rootProps={rootProps}
               dragHandleProps={handleProps}
               onQuickOrderUpdate={handleQuickOrderUpdate}
@@ -626,7 +622,7 @@ export default function ServicesManager({
       )}
 
       {/* Modals */}
-      {canManage && (
+      {(
         <>
           <CreateServiceModal
             open={addServiceOpen}

@@ -1,5 +1,5 @@
 import React from "react";
-import { BarChart3, TrendingUp,  Globe,  ShieldCheck } from "lucide-react";
+import { BarChart3, TrendingUp, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export const revalidate = 0;
@@ -10,8 +10,6 @@ export const metadata = {
 };
 
 export default async function AnalyticsPage() {
-
-  const hasManageAccess = true;
 
   return (
     <div className="w-full space-y-6">
@@ -33,14 +31,9 @@ export default async function AnalyticsPage() {
         </div>
 
         <div>
-          {hasManageAccess ? (
+          {(
             <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 font-medium">
               Full Analytics Access
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="text-xs gap-1 py-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
-              Read-Only Access
             </Badge>
           )}
         </div>
