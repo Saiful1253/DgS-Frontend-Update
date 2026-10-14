@@ -4,7 +4,7 @@ interface HeaderStat {
   label: string;
   value: string | number;
   subtitle: string;
-  tone?: "default" | "primary" | "emerald";
+  tone?: "default" | "primary" | "emerald" | "amber" | "rose";
 }
 
 interface SettingsHeaderProps {
@@ -19,6 +19,8 @@ const TONE_CLASS: Record<NonNullable<HeaderStat["tone"]>, string> = {
   default: "text-slate-900",
   primary: "text-primary",
   emerald: "text-emerald-600",
+  amber: "text-amber-600",
+  rose: "text-rose-600",
 };
 
 /**

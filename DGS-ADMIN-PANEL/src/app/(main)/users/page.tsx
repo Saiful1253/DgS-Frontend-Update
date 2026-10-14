@@ -28,6 +28,9 @@ export default async function SettingsUsersPage({ searchParams }: PageProps) {
   const roles = rolesResult.data;
   const users: AdminUser[] = usersResult.data.data;
   const total = usersResult.data.total;
+  const effectiveTotal = Math.max(total, users.length);
+  const activeCount = users.filter((u) => u.status === "active").length;
+  const inactiveCount = users.filter((u) => u.status !== "active").length;
 
   return (
     <div className="space-y-6 w-full">
@@ -36,12 +39,18 @@ export default async function SettingsUsersPage({ searchParams }: PageProps) {
         title="User & Role Control"
         purpose="Manages admin user accounts and the role assigned to each one."
         stats={[
-          { label: "Total Admin Users", value: total, subtitle: "Registered in system" },
+          { label: "Total Admin Users", value: effectiveTotal, subtitle: "Registered in system" },
           {
             label: "Active Accounts",
-            value: users.filter((u) => u.status === "active").length,
+            value: activeCount,
             subtitle: "On current page",
             tone: "emerald",
+          },
+          {
+            label: "Inactive Accounts",
+            value: inactiveCount,
+            subtitle: "On current page",
+            tone: "amber",
           },
           { label: "Roles Defined", value: roles.length, subtitle: "Access tiers available", tone: "primary" },
         ]}
@@ -50,7 +59,7 @@ export default async function SettingsUsersPage({ searchParams }: PageProps) {
       <UsersList
         users={users}
         roles={roles}
-        total={total}
+        total={effectiveTotal}
         page={page}
         limit={limit}
       />
