@@ -1,0 +1,8 @@
+# Disable LiteSpeed response chunk buffering for Next.js Server Actions
+<IfModule mod_env.c>
+    SetEnv no-gzip 1
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+</IfModule>

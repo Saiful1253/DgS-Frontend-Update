@@ -1,0 +1,116 @@
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
+import {
+  PortfolioChallengeDto,
+  PortfolioPricingTierDto,
+} from './portfolio-challenge.dto';
+
+export class CreatePortfolioDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  project_name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  slug: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  client_name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  client_logo?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  category: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  live_url?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  app_store_url?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  play_store_url?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_featured?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  cover_image?: string;
+
+  @IsOptional()
+  @IsString()
+  primary_challenge?: string;
+
+  @IsOptional()
+  @IsString()
+  primary_solution?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  comparison_enabled?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  comparison_title?: string;
+
+  @IsOptional()
+  @IsString()
+  industry_standard_text?: string;
+
+  @IsOptional()
+  @IsString()
+  our_approach_text?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  pricing_enabled?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  pricing_title?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PortfolioChallengeDto)
+  challenges?: PortfolioChallengeDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PortfolioPricingTierDto)
+  pricing_tiers?: PortfolioPricingTierDto[];
+}

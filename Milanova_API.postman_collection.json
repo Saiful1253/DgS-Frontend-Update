@@ -1,0 +1,912 @@
+{
+  "info": {
+    "_postman_id": "milanova-technologies-api-v1",
+    "name": "Milanova Technologies API Collection",
+    "description": "Complete REST API collection for Milanova Technologies Digital Agency backend platform, including Auth, Portfolio, SaaS Products, ATS Recruitment, Leads & Free Trial Engine, CMS, and Settings.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth & Users",
+      "item": [
+        {
+          "name": "User Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@milanovatech.com\",\n  \"password\": \"Admin123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Logged-in User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Portfolio & Case Studies",
+      "item": [
+        {
+          "name": "Get All Case Studies",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/portfolio?category=Software Engineering&search=FinTech&featured=true&page=1&limit=9",
+              "host": ["{{baseUrl}}"],
+              "path": ["portfolio"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Software Engineering"
+                },
+                {
+                  "key": "search",
+                  "value": "FinTech"
+                },
+                {
+                  "key": "featured",
+                  "value": "true"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "9"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Case Study by Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/portfolio/gaspay-centralized-utility",
+              "host": ["{{baseUrl}}"],
+              "path": ["portfolio", "gaspay-centralized-utility"]
+            }
+          }
+        },
+        {
+          "name": "Create Case Study",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_name\": \"Cloud Banking Suite\",\n  \"slug\": \"cloud-banking-suite\",\n  \"client_name\": \"FinTech EU\",\n  \"category\": \"Software Engineering\",\n  \"tags\": [\".NET Core\", \"AWS\", \"Next.js\"],\n  \"is_featured\": true,\n  \"cover_image\": \"https://images.unsplash.com/photo-1551288049-bebda4e38f71\",\n  \"primary_challenge\": \"High latency in transactions\",\n  \"primary_solution\": \"Event-driven architecture\",\n  \"challenges\": [\n    {\n      \"title\": \"Security Compliance\",\n      \"challenge_description\": \"GDPR data sovereignty requirements\",\n      \"solution_provided\": \"AES-256 encrypted multi-region storage\",\n      \"sort_order\": 1\n    }\n  ],\n  \"pricing_tiers\": [\n    {\n      \"title\": \"Enterprise Growth\",\n      \"currencies\": [\"USD\", \"EUR\", \"BDT\"],\n      \"primary_price\": \"$10,000\",\n      \"regional_prices\": {\n        \"BDT\": \"৳1,000,000\",\n        \"EUR\": \"€9,000\"\n      },\n      \"price_subtitle\": \"One-time investment\",\n      \"deliverables\": [\"Architecture Audit\", \"Full Codebase Transfer\"],\n      \"is_most_popular\": true,\n      \"sort_order\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/portfolio",
+              "host": ["{{baseUrl}}"],
+              "path": ["portfolio"]
+            }
+          }
+        },
+        {
+          "name": "Update Case Study",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_name\": \"Cloud Banking Suite Enterprise\",\n  \"is_featured\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/portfolio/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["portfolio", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Case Study",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/portfolio/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["portfolio", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get All Portfolio Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/portfolio/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["portfolio", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Create Portfolio Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Artificial Intelligence & Cloud\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/portfolio/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["portfolio", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Update Portfolio Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"AI, ML & Big Data\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/portfolio/categories/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["portfolio", "categories", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Portfolio Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/portfolio/categories/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["portfolio", "categories", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products & Ready Solutions",
+      "item": [
+        {
+          "name": "Get All Ready SaaS Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products-saas?industry=Utilities & Energy",
+              "host": ["{{baseUrl}}"],
+              "path": ["products-saas"],
+              "query": [
+                {
+                  "key": "industry",
+                  "value": "Utilities & Energy"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Product by Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products-saas/milanova-enterprise-erp",
+              "host": ["{{baseUrl}}"],
+              "path": ["products-saas", "milanova-enterprise-erp"]
+            }
+          }
+        },
+        {
+          "name": "Create SaaS Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_name\": \"AI Support Agent Platform\",\n  \"slug\": \"ai-support-agent-platform\",\n  \"category\": \"Software Engineering\",\n  \"industry_focus\": [\"Healthcare\", \"FinTech\"],\n  \"deployment_options\": [\"Cloud SaaS\", \"On-Premise\"],\n  \"status_badge\": \"Ready to Deploy\",\n  \"is_featured\": true,\n  \"primary_challenge\": \"High support ticket backlog\",\n  \"primary_solution\": \"Automated LLM agent resolution\",\n  \"tech_specs\": [\"Claude API\", \"Python\", \"NestJS\"],\n  \"modules\": [\n    {\n      \"module_name\": \"Automated Ticket Router\",\n      \"overview\": \"Intelligent NLP classification\",\n      \"core_capability\": \"Auto-routes to priority queues\",\n      \"sort_order\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products-saas",
+              "host": ["{{baseUrl}}"],
+              "path": ["products-saas"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Careers & Applicant Tracking System (ATS)",
+      "item": [
+        {
+          "name": "List Active Job Circulars",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/careers/jobs?openOnly=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["careers", "jobs"],
+              "query": [
+                {
+                  "key": "openOnly",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Job Posting",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Full Stack Next.js & NestJS Developer\",\n  \"employment_type\": \"Full-Time\",\n  \"department\": \"Engineering\",\n  \"location\": \"Remote / Italy / Dhaka Hub\",\n  \"description_requirements\": \"<p>Requirements: 3+ years experience with Next.js App Router, NestJS, and PostgreSQL.</p>\",\n  \"status\": \"Open\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/careers/jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["careers", "jobs"]
+            }
+          }
+        },
+        {
+          "name": "Submit Job Application (Candidate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"job_id\": 1,\n  \"source_channel\": \"Website Form\",\n  \"full_name\": \"John Doe\",\n  \"email\": \"johndoe@example.com\",\n  \"mobile_prefix\": \"+39\",\n  \"mobile_number\": \"3401234567\",\n  \"current_company\": \"Tech Solutions\",\n  \"designation\": \"Software Engineer\",\n  \"linkedin_url\": \"https://linkedin.com/in/johndoe\",\n  \"resume_url\": \"/uploads/resumes/john_doe_cv.pdf\",\n  \"cover_letter\": \"Excited to join Milanova Technologies!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/careers/apply",
+              "host": ["{{baseUrl}}"],
+              "path": ["careers", "apply"]
+            }
+          }
+        },
+        {
+          "name": "List Applicants (ATS Filter)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/careers/applicants?status=New&channel=Website Form",
+              "host": ["{{baseUrl}}"],
+              "path": ["careers", "applicants"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "New"
+                },
+                {
+                  "key": "channel",
+                  "value": "Website Form"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Candidate Status in ATS",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Shortlisted\",\n  \"notes\": \"Passed initial CV screening cleanly.\",\n  \"userId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/careers/applicants/1/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["careers", "applicants", "1", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leads, Inquiries & Free Trial Engine",
+      "item": [
+        {
+          "name": "Submit Contact Inquiry",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Inquiry\",\n  \"full_name\": \"Marco Rossi\",\n  \"email\": \"marco.rossi@client.it\",\n  \"mobile_prefix\": \"+39\",\n  \"mobile_number\": \"3281122334\",\n  \"company_name\": \"Milano Fashion S.p.A.\",\n  \"designation\": \"CTO\",\n  \"message\": \"We need custom software development and cloud migration.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/leads/inquiry",
+              "host": ["{{baseUrl}}"],
+              "path": ["leads", "inquiry"]
+            }
+          }
+        },
+        {
+          "name": "Submit No-Cost Free Trial (1-6 Images)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lead\": {\n    \"full_name\": \"Elena Moretti\",\n    \"email\": \"elena@luxurybrand.com\",\n    \"company_name\": \"Luxury Fashion Studio\",\n    \"service_requirements\": [\n      \"Clipping Path\",\n      \"Background Removal\",\n      \"Photo Retouching\",\n      \"Color Correction\"\n    ],\n    \"return_file_format\": \"PSD\",\n    \"detailed_instructions\": \"Please remove background and provide transparent PSD with ghost mannequin.\",\n    \"want_commercial_quote\": true\n  },\n  \"assets\": [\n    {\n      \"file_name\": \"sample_1.psd\",\n      \"original_name\": \"luxury_bag_raw_01.psd\",\n      \"file_path\": \"/uploads/trials/sample_1.psd\",\n      \"file_size\": 24500000,\n      \"file_type\": \"PSD\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/leads/free-trial",
+              "host": ["{{baseUrl}}"],
+              "path": ["leads", "free-trial"]
+            }
+          }
+        },
+        {
+          "name": "Get All Leads (Admin Inbox)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leads?type=Free Trial",
+              "host": ["{{baseUrl}}"],
+              "path": ["leads"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "Free Trial"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Lead Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Contacted\",\n  \"notes\": \"Sent email confirmation with sample turnaround timeline.\",\n  \"adminUserId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/leads/1/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["leads", "1", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Settings & Business Overview",
+      "item": [
+        {
+          "name": "Get Company Business Overview Settings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/settings/company",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings", "company"]
+            }
+          }
+        },
+        {
+          "name": "Update Company Business Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"legal_company_name\": \"Milanova Technologies S.R.L.\",\n  \"brand_name\": \"Milanova Technologies\",\n  \"calendly_url\": \"https://calendly.com/milanova-tech/30min\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/settings/company",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings", "company"]
+            }
+          }
+        },
+        {
+          "name": "Get Technologies Stack",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/settings/technologies",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings", "technologies"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CMS — Hero Section",
+      "description": "Homepage hero section management (SRS: headline, sub-headline, primary/secondary CTA, background media, Active/Draft status; homepage-only single active variant).",
+      "item": [
+        {
+          "name": "Get All Hero Sections",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cms/hero?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["cms", "hero"],
+              "query": [
+                { "key": "page", "value": "1", "description": "1-based page number" },
+                { "key": "limit", "value": "10", "description": "Items per page (max 100)" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Hero Section by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cms/hero/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["cms", "hero", "1"]
+            }
+          }
+        },
+        {
+          "name": "Create Hero Section",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"headline\": \"Modern Custom Software Solutions\",\n  \"sub_headline\": \"Milanova Technologies designs, builds, and scales web, mobile, and enterprise applications — with a free consultation for every new project.\",\n  \"primary_cta_label\": \"Book a Consultation\",\n  \"primary_cta_link\": \"https://calendly.com/milanova-tech/30min\",\n  \"secondary_cta_label\": \"View Portfolio\",\n  \"secondary_cta_link\": \"/portfolio\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cms/hero",
+              "host": ["{{baseUrl}}"],
+              "path": ["cms", "hero"]
+            }
+          }
+        },
+        {
+          "name": "Update Hero Section",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"headline\": \"Modern Custom Software Solutions\",\n  \"sub_headline\": \"Updated intro text for the homepage display.\",\n  \"primary_cta_label\": \"Book a Free Consultation\",\n  \"primary_cta_link\": \"https://calendly.com/milanova-tech/30min\",\n  \"secondary_cta_label\": \"Explore Services\",\n  \"secondary_cta_link\": \"/services\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cms/hero/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["cms", "hero", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Hero Section",
+          "description": "Soft-deletes the hero and its media, and purges Cloudinary assets.",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cms/hero/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["cms", "hero", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Hero Media",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cms/hero/1/media",
+              "host": ["{{baseUrl}}"],
+              "path": ["cms", "hero", "1", "media"]
+            }
+          }
+        },
+        {
+          "name": "Upload Hero Image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "", "description": "Image file (jpg/png/webp)" },
+                { "key": "sort_order", "value": "0", "type": "text" },
+                { "key": "is_active", "value": "true", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cms/hero/1/media/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["cms", "hero", "1", "media", "upload"]
+            }
+          }
+        },
+        {
+          "name": "Upload Multiple Hero Images",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "files", "type": "file", "src": "", "description": "Up to 10 image files" },
+                { "key": "files", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cms/hero/1/media/upload-multiple",
+              "host": ["{{baseUrl}}"],
+              "path": ["cms", "hero", "1", "media", "upload-multiple"]
+            }
+          }
+        },
+        {
+          "name": "Add Media by URL (YouTube / Image)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"media_url\": \"https://youtu.be/XXXXXXXXXXX\",\n  \"media_type\": \"youtube\",\n  \"sort_order\": 0,\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cms/hero/1/media/url",
+              "host": ["{{baseUrl}}"],
+              "path": ["cms", "hero", "1", "media", "url"]
+            }
+          }
+        },
+        {
+          "name": "Replace Hero Media Image",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "", "description": "Replacement image file" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cms/hero/1/media/1/replace",
+              "host": ["{{baseUrl}}"],
+              "path": ["cms", "hero", "1", "media", "1", "replace"]
+            }
+          }
+        },
+        {
+          "name": "Update Media Metadata",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sort_order\": 0,\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cms/hero/media/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["cms", "hero", "media", "1"]
+            }
+          }
+        },
+        {
+          "name": "Reorder Hero Media",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order\": [\n    { \"id\": 1, \"sort_order\": 0 },\n    { \"id\": 2, \"sort_order\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cms/hero/1/media/reorder",
+              "host": ["{{baseUrl}}"],
+              "path": ["cms", "hero", "1", "media", "reorder"]
+            }
+          }
+        },
+        {
+          "name": "Get Active Hero (Public)",
+          "description": "Public endpoint. Returns the single active homepage hero variant (or null). No auth required.",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/client/hero",
+              "host": ["{{baseUrl}}"],
+              "path": ["client", "hero"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-hanken-grotesk), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  --color-cerulean-tide: #00668a;
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-deep: var(--primary-deep);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-sky-mist: var(--sky-mist);
+  --color-glass-border: var(--glass-border);
+  --radius-button: var(--radius-button);
+  --radius-pill: var(--radius-pill);
+  --color-cerulean-hover: #004c69;
+  --color-cerulean-active: #003b52;
+
+  /* Brand accent alias (blog-details-view uses border-brand-accent/20).
+     Aliased to the :root palette to keep one source of truth. */
+  --color-brand-accent: var(--primary);
+  --color-brand-accent-hover: var(--primary-hover);
+  --color-brand-accent-light: var(--brand-accent-light);
+}
+
+:root {
+  /* MilanoVA Single Source Cerulean Tide Color Palette (SRS Sec 13.4) */
+  --primary: #00668a;
+  --primary-hover: #004c69;
+  --primary-deep: #003b52;
+  --primary-foreground: #ffffff;
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-blur: 16px;
+  --glass-border: #bfc8cf;
+  --radius-button: 8px;
+  --radius-pill: 9999px;
+  --primary-hover: #004c69;
+  --primary-active: #003b52;
+  --primary-foreground: #ffffff;
+
+  --sky-mist: #e6eff6;
+  --secondary: #e6eff6;
+  --secondary-hover: #cce0ee;
+  --secondary-foreground: #003b52;
+
+  /* Lightened brand tint for use on dark surfaces. */
+  --brand-accent-light: #bfc8cf;
+
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  --border: #bfc8cf;
+  --input: #70787f;
+  --ring: #00668a;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #e6eff6;
+  --accent-foreground: #003b52;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #334155;
+  --sidebar-primary: #00668a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e6eff6;
+  --sidebar-accent-foreground: #00668a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #00668a;
+
+  --radius-button: 8px;
+  --radius-badge: 9999px;
+  --radius-card: 16px;
+}
