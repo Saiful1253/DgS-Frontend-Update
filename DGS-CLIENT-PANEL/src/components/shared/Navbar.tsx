@@ -7,8 +7,10 @@ import { Button } from "../ui/button";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useSiteConfig } from "@/context/SiteConfigContext";
+import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 
-const navLinks = [
+// English-only source strings. Bangla is produced at runtime by <AutoTranslate>.
+const navLinks: { label: string; href: string }[] = [
   { label: "Home", href: "/" },
   { label: "Tech Stack", href: "/products" },
   { label: "Services", href: "/services" },
@@ -84,6 +86,8 @@ export default function Navbar() {
 
           {/* Actions CTA */}
           <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+
             <Link href="/contact">
               <Button className="h-9 px-4 text-xs font-bold uppercase tracking-wider bg-primary hover:bg-primary-hover text-white rounded-lg shadow-md cursor-pointer flex items-center gap-2">
                 <PhoneCall className="w-3.5 h-3.5" />
@@ -119,7 +123,8 @@ export default function Navbar() {
             ))}
           </div>
 
-          <div className="pt-6 border-t border-slate-800">
+          <div className="pt-6 border-t border-slate-800 space-y-3">
+            <LanguageSwitcher fullWidth />
             <Link href="/contact" onClick={() => setOpen(false)}>
               <Button className="w-full h-11 text-xs font-bold uppercase tracking-wider bg-primary hover:bg-primary-hover text-white rounded-xl flex items-center justify-center gap-2">
                 <PhoneCall className="w-4 h-4" />

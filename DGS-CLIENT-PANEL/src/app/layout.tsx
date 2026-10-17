@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Hanken_Grotesk, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SplashScreen from "@/components/shared/SplashScreen";
-import SmoothScroll from "@/components/shared/SmoothScroll";
+import AutoTranslate from "@/components/shared/AutoTranslate";
 import { SiteConfigProvider } from "@/context/SiteConfigContext";
+import { LanguageProvider } from "@/context/LanguageContext";
 import { getSiteConfig } from "@/services/site-config/site-config.service";
 import FloatingWhatsApp from "@/components/shared/FloatingWhatsApp";
 import Navbar from "@/components/shared/Navbar";
@@ -79,21 +80,23 @@ export default async function RootLayout({
   const siteConfig = await getSiteConfig();
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta
           name="google-site-verification"
           content="t8Oyf20bPl5W-UsQvEsrEaxwM66bah4PHMnx8YyoYPM"
         />
       </head>
-      <body className={`${hankenGrotesk.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${hankenGrotesk.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
         <SiteConfigProvider config={siteConfig}>
-          <SplashScreen />
-          <SmoothScroll />
-          <Navbar />
-          <main className="min-h-screen">{children}</main>
-          <Footer />
-          <FloatingWhatsApp />
+          <LanguageProvider>
+            <AutoTranslate />
+            <SplashScreen />
+            <Navbar />
+            <main className="min-h-screen">{children}</main>
+            <Footer />
+            <FloatingWhatsApp />
+          </LanguageProvider>
         </SiteConfigProvider>
 
         <Toaster

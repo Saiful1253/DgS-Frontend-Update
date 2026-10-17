@@ -108,17 +108,17 @@ export default function BlogsSection({
   };
 
   return (
-    <section id="blogs" className="scroll-mt-24 pt-10 pb-20 border-t border-slate-100 bg-slate-50/30 text-slate-900">
+    <section id="blogs" suppressHydrationWarning className="scroll-mt-24 pt-10 pb-20 border-t border-slate-100 bg-slate-50/30 text-slate-900">
       <div className="container mx-auto px-6">
         {/* HEADER SECTION */}
-        <div className="mb-16 text-center max-w-6xl mx-auto px-6">
-          <span className="text-xs uppercase tracking-widest font-black text-brand-accent mb-3 block">
+        <div className="mb-16 text-center max-w-6xl mx-auto px-6" suppressHydrationWarning>
+          <span suppressHydrationWarning className="text-xs uppercase tracking-widest font-black text-brand-accent mb-3 block">
             Engineering Insights
           </span>
-          <h2 className="text-3xl md:text-5xl font-black text-zinc-900 uppercase tracking-tight mb-4">
+          <h2 suppressHydrationWarning className="text-3xl md:text-5xl font-black text-zinc-900 uppercase tracking-tight mb-4">
             Milanova Technologies Blog
           </h2>
-          <p className="text-zinc-650 text-sm md:text-base font-medium max-w-lg mx-auto">
+          <p suppressHydrationWarning className="text-zinc-650 text-sm md:text-base font-medium max-w-lg mx-auto">
             Deep dives into software architecture, cloud engineering, AI, and technology strategy.
           </p>
         </div>
