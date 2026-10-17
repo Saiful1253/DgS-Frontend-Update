@@ -92,12 +92,13 @@ function YouTubeSlide({
   const playerRef = useRef<any>(null);
   const isMountedRef = useRef(false);
   const hasTriggeredRef = useRef(false);
-  const isLoadedRef = useRef(false);
-  const prevCurrRef = useRef(0);
+  const hasPlayedOnceRef = useRef(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [hasShown, setHasShown] = useState(false);
 
   if (!isActive && isLoaded) {
     setIsLoaded(false);
+    setHasShown(false);
   }
 
   const posterUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
@@ -107,7 +108,6 @@ function YouTubeSlide({
 
     if (!isActive) {
       hasTriggeredRef.current = false;
-      isLoadedRef.current = false;
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch { }
         playerRef.current = null;
@@ -116,11 +116,8 @@ function YouTubeSlide({
     }
 
     hasTriggeredRef.current = false;
-    isLoadedRef.current = false;
-    prevCurrRef.current = 0;
-    let loadTimer: NodeJS.Timeout | null = null;
+    hasPlayedOnceRef.current = false;
     let pollInterval: NodeJS.Timeout | null = null;
-    let remaskTimer: NodeJS.Timeout | null = null;
 
     loadYouTubeApi().then(() => {
       if (!isMountedRef.current || !containerRef.current) return;
@@ -167,8 +164,9 @@ function YouTubeSlide({
             if (!isMountedRef.current) return;
 
             if (evt.data === 1) {
-              // PLAYING -> hold the poster over the player until YouTube's own
-              // chrome (play/pause button, title/caption bar) has faded away.
+              // PLAYING -> show the video straight away. The overscan crop and
+              // the hover shield already keep YouTube's chrome out of sight,
+              // so no masking delay is needed here.
               try { evt.target.setPlaybackQuality("hd1080"); } catch { }
               // Belt-and-braces: drop the captions modules outright, so a
               // viewer's saved subtitle preference can never draw text.
@@ -176,12 +174,11 @@ function YouTubeSlide({
                 evt.target.unloadModule("captions");
                 evt.target.unloadModule("cc");
               } catch { }
-              if (loadTimer) clearTimeout(loadTimer);
-              loadTimer = setTimeout(() => {
-                if (isMountedRef.current) {
-                  setIsLoaded(true);
-                }
-              }, 8000);
+              setIsLoaded(hasShown);
+              if (!hasShown) {
+                setHasShown(true);
+                setIsLoaded(true);
+              }
 
               // Monitor playback time to loop or advance slide BEFORE video end-screen
               if (pollInterval) clearInterval(pollInterval);
@@ -190,27 +187,6 @@ function YouTubeSlide({
                 try {
                   const curr = playerRef.current.getCurrentTime();
                   const dur = playerRef.current.getDuration();
-
-                  // Reveal the real video only once the player chrome is gone
-                  if (!isLoadedRef.current && dur > 0 && curr >= 3.5) {
-                    isLoadedRef.current = true;
-                    setIsLoaded(true);
-                  }
-
-                  // Loop restart / backward seek -> re-mask, otherwise YouTube
-                  // flashes its replay (play/pause) icon over the hero.
-                  if (isLoadedRef.current && curr + 0.5 < prevCurrRef.current) {
-                    isLoadedRef.current = false;
-                    setIsLoaded(false);
-                    if (remaskTimer) clearTimeout(remaskTimer);
-                    remaskTimer = setTimeout(() => {
-                      if (isMountedRef.current) {
-                        isLoadedRef.current = true;
-                        setIsLoaded(true);
-                      }
-                    }, 1500);
-                  }
-                  prevCurrRef.current = curr;
 
                   if (dur > 0 && curr >= dur - 0.4) {
                     if (loop) {
@@ -225,10 +201,12 @@ function YouTubeSlide({
               }, 100);
             } else {
               // NOT PLAYING (paused, buffering, ended, unstarted) -> COVER WITH POSTER
-              if (loadTimer) clearTimeout(loadTimer);
-              if (remaskTimer) clearTimeout(remaskTimer);
-              isLoadedRef.current = false;
-              setIsLoaded(false);
+              // Keep the poster covering on the very first unstarted state (brief) and
+              // whenever the player actually goes to a non-playing state after starting.
+              // Keep poster visible only until the first actual frame displays.
+              // After first reveal, stay visible only during non-playing states
+              // to avoid startup flash without re-introducing a long delay.
+              setIsLoaded(hasShown);
 
               if (evt.data === 2 || evt.data === -1 || evt.data === 5) {
                 try { evt.target.playVideo(); } catch { }
@@ -257,11 +235,10 @@ function YouTubeSlide({
 
     return () => {
       isMountedRef.current = false;
-      if (loadTimer) clearTimeout(loadTimer);
       if (pollInterval) clearInterval(pollInterval);
-      if (remaskTimer) clearTimeout(remaskTimer);
-      isLoadedRef.current = false;
       setIsLoaded(false);
+    setHasShown(false);
+      hasPlayedOnceRef.current = false;
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch { }
         playerRef.current = null;
@@ -278,8 +255,8 @@ function YouTubeSlide({
         fill
         sizes="100vw"
         className={cn(
-          "object-cover z-20 transition-opacity duration-500",
-          isLoaded ? "opacity-0" : "opacity-100"
+          "object-cover z-20 transition-opacity duration-300",
+          isLoaded && hasShown ? "opacity-0" : "opacity-100"
         )}
         priority={isActive}
       />
@@ -288,13 +265,13 @@ function YouTubeSlide({
       {isActive && (
         <div
           className={cn(
-            "absolute pointer-events-none transition-opacity duration-500",
-            isLoaded ? "opacity-100" : "opacity-0"
+            "absolute pointer-events-none transition-opacity duration-300 [&_iframe]:pointer-events-none",
+            isLoaded && hasShown ? "opacity-100" : "opacity-0"
           )}
           style={{
             top: "50%",
             left: "50%",
-            transform: "translate(-50%, -50%) scale(1.35)",
+            transform: "translate(-50%, -50%) scale(1.5)",
             width: "max(100vw, calc(100vh * 16 / 9))",
             aspectRatio: "16 / 9",
           }}
@@ -303,9 +280,10 @@ function YouTubeSlide({
         </div>
       )}
 
-      {/* Hover shield — never let the cursor reach the iframe, so YouTube
-          chrome (play/pause, title/caption bar) can never appear. */}
-      <div className="absolute inset-0 z-10 pointer-events-auto" aria-hidden="true" />
+      { /* Center play/pause overlay shown momentarily by some browsers
+          at startup. Block it with a neutral layer that never captures
+          hover. */ }
+      <div className="absolute inset-0 z-20 pointer-events-none" aria-hidden="true" />
     </div>
   );
 }
