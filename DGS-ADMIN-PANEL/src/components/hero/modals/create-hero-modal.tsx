@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, GripVertical, Eye, EyeOff, Youtube } from "lucide-react";
+import { Plus, Trash2, GripVertical, Eye, EyeOff, Youtube, Upload } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { heroSectionSchema } from "@/zod/hero.validation";
+import { uploadHeroIconAction } from "@/actions/upload.actions";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import {
@@ -61,12 +62,16 @@ interface CreateHeroModalProps {
   disabled?: boolean;
 }
 
+
+
 export default function CreateHeroModal({ onAddHero, disabled = false }: CreateHeroModalProps) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form States
+  // Form States (start empty, no auto-fill)
   const [headline, setHeadline] = useState("");
+  const [highlightText, setHighlightText] = useState("");
+  const [badgeText, setBadgeText] = useState("");
   const [subHeadline, setSubHeadline] = useState("");
   const [primaryCtaLabel, setPrimaryCtaLabel] = useState("");
   const [primaryCtaLink, setPrimaryCtaLink] = useState("");
@@ -89,6 +94,8 @@ export default function CreateHeroModal({ onAddHero, disabled = false }: CreateH
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
       setHeadline("");
+      setHighlightText("");
+      setBadgeText("");
       setSubHeadline("");
       setPrimaryCtaLabel("");
       setPrimaryCtaLink("");
@@ -196,6 +203,8 @@ export default function CreateHeroModal({ onAddHero, disabled = false }: CreateH
     const payload = {
       headline,
       sub_headline: subHeadline,
+      badge_text: badgeText,
+      highlight_text: highlightText,
       primary_cta_label: primaryCtaLabel,
       primary_cta_link: primaryCtaLink,
       secondary_cta_label: secondaryCtaLabel,
@@ -253,60 +262,103 @@ export default function CreateHeroModal({ onAddHero, disabled = false }: CreateH
           <div className="space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Main Content</h3>
             <div className="space-y-1.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <label className="text-xs font-semibold text-slate-700">Top Badge Text (Optional)</label>
+                <span className="text-[10px] text-slate-400 font-normal truncate">e.g. TITAS GAS 1ST CLASS CONTRACTOR • GOVT. APPROVED</span>
+              </div>
+              <Input
+                value={badgeText}
+                onChange={(e) => setBadgeText(e.target.value)}
+                placeholder="e.g. TITAS GAS 1ST CLASS CONTRACTOR • GOVT. APPROVED"
+              />
+              <p className="text-[10px] text-slate-400">Pill badge above headline. Use &quot;•&quot; to highlight the second segment.</p>
+            </div>
+
+            <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700">Headline *</label>
               <Input
                 value={headline}
                 onChange={(e) => setHeadline(e.target.value)}
-                placeholder="e.g. Next-Gen Enterprise Solutions"
+                placeholder="e.g. Safe & Reliable Gas & Pipeline Engineering Solutions"
+                className={errors.headline ? "border-red-500" : ""}
               />
-              {errors.headline && <p className="text-xs text-red-500">{errors.headline}</p>}
+              {errors.headline && <p className="text-xs text-red-500 font-medium">{errors.headline}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Sub-headline</label>
+              <label className="text-xs font-semibold text-slate-700">Headline Highlight Text (Optional)</label>
               <Input
+                value={highlightText}
+                onChange={(e) => setHighlightText(e.target.value)}
+                placeholder="e.g. Gas & Pipeline"
+              />
+              <p className="text-[10px] text-slate-400">Word or phrase inside headline to colorize (default: #ff5722).</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700">Sub-headline / Description *</label>
+              <textarea
                 value={subHeadline}
                 onChange={(e) => setSubHeadline(e.target.value)}
-                placeholder="e.g. Empowering businesses through digital transformation"
+                rows={3}
+                className={cn(
+                  "w-full rounded-md border border-slate-200 bg-transparent px-3 py-2 text-xs shadow-xs placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+                  errors.sub_headline ? "border-red-500" : ""
+                )}
+                placeholder="e.g. Digital Gas Service – Titas Gas 1st Class Enlisted Contractor..."
               />
+              {errors.sub_headline && <p className="text-xs text-red-500 font-medium">{errors.sub_headline}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">Primary CTA Label</label>
-                <Input
-                  value={primaryCtaLabel}
-                  onChange={(e) => setPrimaryCtaLabel(e.target.value)}
-                  placeholder="e.g. Get Started"
-                />
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Call-to-Action (CTA) Buttons</h4>
+                <span className="text-[10px] text-slate-400 font-medium">Smart detection: Phone number, WhatsApp, or Page URL</span>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">Primary CTA Link</label>
-                <Input
-                  value={primaryCtaLink}
-                  onChange={(e) => setPrimaryCtaLink(e.target.value)}
-                  placeholder="e.g. /contact"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700">Primary CTA Label *</label>
+                  <Input
+                    value={primaryCtaLabel}
+                    onChange={(e) => setPrimaryCtaLabel(e.target.value)}
+                    placeholder="e.g. Explore Services"
+                    className={errors.primary_cta_label ? "border-red-500" : ""}
+                  />
+                  {errors.primary_cta_label && <p className="text-xs text-red-500 font-medium">{errors.primary_cta_label}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700">Primary CTA Link or Phone / WhatsApp *</label>
+                  <Input
+                    value={primaryCtaLink}
+                    onChange={(e) => setPrimaryCtaLink(e.target.value)}
+                    placeholder="e.g. #services, 01778277178, or wa.me/..."
+                    className={errors.primary_cta_link ? "border-red-500" : ""}
+                  />
+                  {errors.primary_cta_link && <p className="text-xs text-red-500 font-medium">{errors.primary_cta_link}</p>}
+                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">Secondary CTA Label</label>
-                <Input
-                  value={secondaryCtaLabel}
-                  onChange={(e) => setSecondaryCtaLabel(e.target.value)}
-                  placeholder="e.g. Learn More"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700">Secondary CTA Label (Optional)</label>
+                  <Input
+                    value={secondaryCtaLabel}
+                    onChange={(e) => setSecondaryCtaLabel(e.target.value)}
+                    placeholder="e.g. 01778-277178"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700">Secondary CTA Link or Phone / WhatsApp (Optional)</label>
+                  <Input
+                    value={secondaryCtaLink}
+                    onChange={(e) => setSecondaryCtaLink(e.target.value)}
+                    placeholder="e.g. tel:01778277178 or wa.me/8801778..."
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">Secondary CTA Link</label>
-                <Input
-                  value={secondaryCtaLink}
-                  onChange={(e) => setSecondaryCtaLink(e.target.value)}
-                  placeholder="e.g. /about"
-                />
-              </div>
+              <p className="text-[10px] text-slate-500 italic">
+                * If you enter a phone number (e.g. 01778-277178), it will show a call icon and trigger a direct call. If you enter a WhatsApp link or number, it will open WhatsApp chat. Otherwise, it functions as a regular website button link.
+              </p>
             </div>
 
             <div className="space-y-1.5">

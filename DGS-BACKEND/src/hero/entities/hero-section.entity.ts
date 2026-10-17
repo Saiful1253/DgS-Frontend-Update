@@ -10,6 +10,8 @@ export class HeroSection {
   @Column({ type: 'text', nullable: true }) primary_cta_link: string;
   @Column({ type: 'varchar', length: 100, nullable: true }) secondary_cta_label: string;
   @Column({ type: 'text', nullable: true }) secondary_cta_link: string;
+  @Column({ type: 'varchar', length: 255, nullable: true }) badge_text?: string;
+  @Column({ type: 'varchar', length: 150, nullable: true }) highlight_text?: string;
   @Column({ type: 'varchar', length: 20, default: 'draft' }) status: string;
   @Column({ type: 'boolean', default: false }) is_deleted: boolean;
   @CreateDateColumn() created_at: Date;

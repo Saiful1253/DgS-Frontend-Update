@@ -37,3 +37,19 @@ export async function uploadServicePillarIconAction(
     return fail(e instanceof Error ? e.message : "Failed to upload pillar icon");
   }
 }
+
+export async function uploadHeroIconAction(
+  formData: FormData,
+  folder: string = "hero-icons"
+): Promise<ActionResult> {
+  try {
+    if (!formData.get("file")) return fail("No file selected");
+    if (!formData.has("folder")) formData.append("folder", folder);
+    const res = await serverFetch.post("/upload/image", { body: formData as any });
+    const result = fromServiceResponse(await parseApiResponse(res), "Failed to upload icon");
+    if (!result.success) return result;
+    return { ...result, message: result.message || "icon uploaded successfully" };
+  } catch (e: unknown) {
+    return fail(e instanceof Error ? e.message : "Failed to upload icon");
+  }
+}

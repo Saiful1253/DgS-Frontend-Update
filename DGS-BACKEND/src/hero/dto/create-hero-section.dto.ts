@@ -22,13 +22,13 @@ export class CreateHeroSectionDto {
   sub_headline: string;
 
   @IsString()
-  @IsOptional()
+  @IsNotEmpty()
   @MaxLength(100)
-  primary_cta_label?: string;
+  primary_cta_label: string;
 
   @IsString()
-  @IsOptional()
-  primary_cta_link?: string;
+  @IsNotEmpty()
+  primary_cta_link: string;
 
   @IsString()
   @IsOptional()
@@ -38,6 +38,16 @@ export class CreateHeroSectionDto {
   @IsString()
   @IsOptional()
   secondary_cta_link?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  badge_text?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(150)
+  highlight_text?: string;
 
   @IsIn([...HERO_STATUSES])
   @IsOptional()

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, GripVertical, RefreshCcw, Eye, EyeOff, Youtube, Info } from "lucide-react";
+import { Plus, Trash2, GripVertical, RefreshCcw, Eye, EyeOff, Youtube, Info, Upload } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { HeroSection, HeroImageOps } from "@/types/hero";
 import { heroSectionSchema } from "@/zod/hero.validation";
+import { uploadHeroIconAction } from "@/actions/upload.actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -53,12 +54,16 @@ interface EditHeroModalProps {
   disabled?: boolean;
 }
 
+
+
 export default function EditHeroModal({ hero, onSave, trigger, disabled = false }: EditHeroModalProps) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Form States
   const [headline, setHeadline] = useState(hero.headline || "");
+  const [highlightText, setHighlightText] = useState(hero.highlight_text || "");
+  const [badgeText, setBadgeText] = useState(hero.badge_text || "");
   const [subHeadline, setSubHeadline] = useState(hero.sub_headline || "");
   const [primaryCtaLabel, setPrimaryCtaLabel] = useState(hero.primary_cta_label || "");
   const [primaryCtaLink, setPrimaryCtaLink] = useState(hero.primary_cta_link || "");
@@ -83,6 +88,8 @@ export default function EditHeroModal({ hero, onSave, trigger, disabled = false 
   useEffect(() => {
     if (open) {
       setHeadline(hero.headline || "");
+      setHighlightText(hero.highlight_text || "");
+      setBadgeText(hero.badge_text || "");
       setSubHeadline(hero.sub_headline || "");
       setPrimaryCtaLabel(hero.primary_cta_label || "");
       setPrimaryCtaLink(hero.primary_cta_link || "");
@@ -238,7 +245,17 @@ export default function EditHeroModal({ hero, onSave, trigger, disabled = false 
 
   const handleSave = async () => {
     setErrors({});
-    const payload = { headline, sub_headline: subHeadline, primary_cta_label: primaryCtaLabel, primary_cta_link: primaryCtaLink, secondary_cta_label: secondaryCtaLabel, secondary_cta_link: secondaryCtaLink, status };
+    const payload = {
+      headline,
+      sub_headline: subHeadline,
+      badge_text: badgeText,
+      highlight_text: highlightText,
+      primary_cta_label: primaryCtaLabel,
+      primary_cta_link: primaryCtaLink,
+      secondary_cta_label: secondaryCtaLabel,
+      secondary_cta_link: secondaryCtaLink,
+      status,
+    };
     const parsed = heroSectionSchema.safeParse(payload);
 
     if (!parsed.success) {
@@ -341,36 +358,85 @@ export default function EditHeroModal({ hero, onSave, trigger, disabled = false 
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold">Headline :</label>
-            <Input value={headline} onChange={(e) => setHeadline(e.target.value)} className={errors.headline ? "border-red-500" : ""} />
+            <div className="flex items-baseline justify-between gap-2">
+              <label className="text-xs font-bold">Top Badge Text (Optional) :</label>
+              <span className="text-[10px] text-slate-400 font-normal truncate">e.g. TITAS GAS 1ST CLASS CONTRACTOR • GOVT. APPROVED</span>
+            </div>
+            <Input
+              value={badgeText ?? ""}
+              onChange={(e) => setBadgeText(e.target.value)}
+              placeholder="e.g. TITAS GAS 1ST CLASS CONTRACTOR • GOVT. APPROVED"
+            />
+            <p className="text-[10px] text-slate-400">Pill badge shown above headline. Use &quot;•&quot; to highlight the second segment.</p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold">Headline * :</label>
+            <Input
+              value={headline ?? ""}
+              onChange={(e) => setHeadline(e.target.value)}
+              placeholder="e.g. Safe & Reliable Gas & Pipeline Engineering Solutions"
+              className={errors.headline ? "border-red-500" : ""}
+            />
             {errors.headline && <p className="text-[10px] font-bold text-red-500">{errors.headline}</p>}
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold">Sub-headline / Intro Text :</label>
-            <Input value={subHeadline} onChange={(e) => setSubHeadline(e.target.value)} className={errors.sub_headline ? "border-red-500" : ""} />
+            <label className="text-xs font-bold">Headline Highlight Text (Optional) :</label>
+            <Input
+              value={highlightText ?? ""}
+              onChange={(e) => setHighlightText(e.target.value)}
+              placeholder="e.g. Gas & Pipeline"
+            />
+            <p className="text-[10px] text-slate-400">Phrase inside headline to colorize (default: #ff5722).</p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold">Sub-headline / Intro Description * :</label>
+            <textarea
+              value={subHeadline ?? ""}
+              onChange={(e) => setSubHeadline(e.target.value)}
+              rows={3}
+              className={cn(
+                "w-full rounded-md border border-slate-200 bg-transparent px-3 py-2 text-xs shadow-xs placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+                errors.sub_headline ? "border-red-500" : ""
+              )}
+              placeholder="e.g. Digital Gas Service – Titas Gas 1st Class Enlisted Contractor..."
+            />
             {errors.sub_headline && <p className="text-[10px] font-bold text-red-500">{errors.sub_headline}</p>}
           </div>
 
+          <div className="space-y-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Call-to-Action (CTA) Buttons</h4>
+              <span className="text-[10px] text-slate-400 font-medium">Smart detection: Phone number, WhatsApp, or Page URL</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold">Primary CTA Label * :</label>
+                <Input value={primaryCtaLabel ?? ""} onChange={(e) => setPrimaryCtaLabel(e.target.value)} className={errors.primary_cta_label ? "border-red-500" : ""} />
+                {errors.primary_cta_label && <p className="text-[10px] font-bold text-red-500">{errors.primary_cta_label}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold">Primary CTA Link or Phone / WhatsApp * :</label>
+                <Input value={primaryCtaLink ?? ""} onChange={(e) => setPrimaryCtaLink(e.target.value)} className={errors.primary_cta_link ? "border-red-500" : ""} />
+                {errors.primary_cta_link && <p className="text-[10px] font-bold text-red-500">{errors.primary_cta_link}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold">Secondary CTA Label (Optional) :</label>
+                <Input value={secondaryCtaLabel ?? ""} onChange={(e) => setSecondaryCtaLabel(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold">Secondary CTA Link or Phone / WhatsApp (Optional) :</label>
+                <Input value={secondaryCtaLink ?? ""} onChange={(e) => setSecondaryCtaLink(e.target.value)} />
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500 italic">
+              * If you enter a phone number (e.g. 01778-277178), it will show a call icon and trigger a direct call. If you enter a WhatsApp link or number, it will open WhatsApp chat. Otherwise, it functions as a regular website button link.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold">Primary CTA Label :</label>
-              <Input value={primaryCtaLabel} onChange={(e) => setPrimaryCtaLabel(e.target.value)} className={errors.primary_cta_label ? "border-red-500" : ""} />
-              {errors.primary_cta_label && <p className="text-[10px] font-bold text-red-500">{errors.primary_cta_label}</p>}
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold">Primary CTA Link :</label>
-              <Input value={primaryCtaLink} onChange={(e) => setPrimaryCtaLink(e.target.value)} className={errors.primary_cta_link ? "border-red-500" : ""} />
-              {errors.primary_cta_link && <p className="text-[10px] font-bold text-red-500">{errors.primary_cta_link}</p>}
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold">Secondary CTA Label (optional) :</label>
-              <Input value={secondaryCtaLabel} onChange={(e) => setSecondaryCtaLabel(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold">Secondary CTA Link (optional) :</label>
-              <Input value={secondaryCtaLink} onChange={(e) => setSecondaryCtaLink(e.target.value)} />
-            </div>
 
             <div className="space-y-1">
               <label className="text-xs font-bold">Status :</label>

@@ -21,6 +21,8 @@ export interface HeroSection {
   primary_cta_link: string | null;
   secondary_cta_label: string | null;
   secondary_cta_link: string | null;
+  badge_text?: string | null;
+  highlight_text?: string | null;
   status: HeroStatus;
   is_deleted?: boolean;
   media: HeroMedia[];
