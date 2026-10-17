@@ -8,7 +8,7 @@ import { HeroSection } from './hero-section.entity';
 export class HeroMedia {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' }) id: number;
   @Column({ type: 'bigint' }) hero_section_id: number;
-  @Column({ type: 'varchar', length: 20 }) media_type: string; // image / youtube
+  @Column({ type: 'varchar', length: 20 }) media_type: string; // image / youtube / video
   @Column({ type: 'text' }) media_url: string;
   @Column({ type: 'text', nullable: true }) cloudinary_public_id: string; // ✅ added for easier media management
   @Column({ type: 'integer', default: 0 }) sort_order: number;

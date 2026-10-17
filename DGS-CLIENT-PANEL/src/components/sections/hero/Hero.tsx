@@ -1,15 +1,14 @@
 "use client";
 
 import { useMemo, useState, useSyncExternalStore, useRef, useEffect, useCallback } from "react";
-import { ExternalLink, ArrowRight, ChevronDown, ShieldCheck, Users, Headphones, Phone, Wrench, Flame, Zap, Mail, MessageCircle } from "lucide-react";
+import { ExternalLink, ArrowRight, ChevronDown } from "lucide-react";
 import { Button } from "../../ui/button";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, EffectFade, Pagination } from "swiper/modules";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
 import { useSiteConfig } from "@/context/SiteConfigContext";
 import type { Swiper as SwiperType } from "swiper";
-import type { HeroSection, HeroMedia } from "@/types/hero";
+import type { HeroSection, HeroMedia } from "@/types/cms/cms";
 
 // Swiper styles
 import "swiper/css";
@@ -28,28 +27,11 @@ const getYouTubeId = (url: string): string | null => {
   return m ? m[1] : null;
 };
 
-// ─── YouTube SDK types ────────────────────────────────────────────────────
-type YTPlayer = {
-  destroy: () => void;
-  mute: () => void;
-  playVideo: () => void;
-  setPlaybackQuality: (quality: string) => void;
-  getCurrentTime: () => number;
-  getDuration: () => number;
-  seekTo: (seconds: number, allowSeekAhead?: boolean) => void;
-};
-type YTPlayerEvent = { target: YTPlayer; data: number };
-type YTNamespace = { Player: new (el: HTMLElement, opts: unknown) => YTPlayer };
-type WindowWithYT = Window & {
-  YT?: YTNamespace;
-  onYouTubeIframeAPIReady?: () => void;
-};
-
 // ─── YouTube SDK Loader ───────────────────────────────────────────────────
 let ytApiPromise: Promise<void> | null = null;
 function loadYouTubeApi(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
-  if ((window as WindowWithYT).YT?.Player) {
+  if ((window as any).YT && (window as any).YT.Player) {
     return Promise.resolve();
   }
   if (!ytApiPromise) {
@@ -57,7 +39,7 @@ function loadYouTubeApi(): Promise<void> {
       const existing = document.getElementById("yt-iframe-api");
       if (existing) {
         const check = setInterval(() => {
-          if ((window as WindowWithYT).YT?.Player) {
+          if ((window as any).YT && (window as any).YT.Player) {
             clearInterval(check);
             resolve();
           }
@@ -67,7 +49,7 @@ function loadYouTubeApi(): Promise<void> {
       const tag = document.createElement("script");
       tag.id = "yt-iframe-api";
       tag.src = "https://www.youtube.com/iframe_api";
-      (window as WindowWithYT).onYouTubeIframeAPIReady = () => resolve();
+      (window as any).onYouTubeIframeAPIReady = () => resolve();
       document.head.appendChild(tag);
     });
   }
@@ -80,26 +62,22 @@ function YouTubeSlide({
   isActive,
   loop,
   onEnded,
+  headline,
+  slideIndex,
 }: {
   videoId: string;
   isActive: boolean;
   loop: boolean;
   onEnded: () => void;
-  headline?: string;
-  slideIndex?: number;
+  headline: string;
+  slideIndex: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
   const isMountedRef = useRef(false);
   const hasTriggeredRef = useRef(false);
-  const hasPlayedOnceRef = useRef(false);
+  const isLoadedRef = useRef(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [hasShown, setHasShown] = useState(false);
-
-  if (!isActive && isLoaded) {
-    setIsLoaded(false);
-    setHasShown(false);
-  }
 
   const posterUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 
@@ -107,6 +85,8 @@ function YouTubeSlide({
     isMountedRef.current = true;
 
     if (!isActive) {
+      setIsLoaded(false);
+      isLoadedRef.current = false;
       hasTriggeredRef.current = false;
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch { }
@@ -116,7 +96,9 @@ function YouTubeSlide({
     }
 
     hasTriggeredRef.current = false;
-    hasPlayedOnceRef.current = false;
+    isLoadedRef.current = false;
+    setIsLoaded(false);
+    let loadTimer: NodeJS.Timeout | null = null;
     let pollInterval: NodeJS.Timeout | null = null;
 
     loadYouTubeApi().then(() => {
@@ -141,14 +123,8 @@ function YouTubeSlide({
           playsinline: 1,
           iv_load_policy: 3,
           showinfo: 0,
-          cc_load_policy: 0,
-          // `cc_load_policy` only means "follow the viewer's own prefs" — a
-          // logged-in viewer with captions ON still gets subtitles. Pointing
-          // the caption language at a code that does not exist means no track
-          // can ever be selected, so no subtitle text is drawn.
-          cc_lang_pref: "invalid",
           autohide: 1,
-          // DO NOT set `playlist` parameter — playlist mode renders |◀ || ▶| overlay controls!
+          ...(loop ? { loop: 1, playlist: videoId } : {}),
           origin: typeof window !== "undefined" ? window.location.origin : undefined,
         },
         events: {
@@ -164,23 +140,12 @@ function YouTubeSlide({
             if (!isMountedRef.current) return;
 
             if (evt.data === 1) {
-              // PLAYING -> show the video straight away. The overscan crop and
-              // the hover shield already keep YouTube's chrome out of sight,
-              // so no masking delay is needed here.
               try { evt.target.setPlaybackQuality("hd1080"); } catch { }
-              // Belt-and-braces: drop the captions modules outright, so a
-              // viewer's saved subtitle preference can never draw text.
-              try {
-                evt.target.unloadModule("captions");
-                evt.target.unloadModule("cc");
-              } catch { }
-              setIsLoaded(hasShown);
-              if (!hasShown) {
-                setHasShown(true);
-                setIsLoaded(true);
-              }
+              if (loadTimer) clearTimeout(loadTimer);
+              loadTimer = setTimeout(() => {
+                if (isMountedRef.current) setIsLoaded(true);
+              }, 8000);
 
-              // Monitor playback time to loop or advance slide BEFORE video end-screen
               if (pollInterval) clearInterval(pollInterval);
               pollInterval = setInterval(() => {
                 if (!playerRef.current || !isMountedRef.current) return;
@@ -188,25 +153,22 @@ function YouTubeSlide({
                   const curr = playerRef.current.getCurrentTime();
                   const dur = playerRef.current.getDuration();
 
-                  if (dur > 0 && curr >= dur - 0.4) {
-                    if (loop) {
-                      playerRef.current.seekTo(0, true);
-                    } else if (!hasTriggeredRef.current) {
-                      hasTriggeredRef.current = true;
-                      clearInterval(pollInterval!);
-                      onEnded();
-                    }
+                  if (!isLoadedRef.current && dur > 0 && curr >= 3.5) {
+                    isLoadedRef.current = true;
+                    setIsLoaded(true);
+                  }
+
+                  if (!loop && dur > 0 && curr >= dur - 0.4 && !hasTriggeredRef.current) {
+                    hasTriggeredRef.current = true;
+                    clearInterval(pollInterval!);
+                    onEnded();
                   }
                 } catch { }
               }, 100);
             } else {
-              // NOT PLAYING (paused, buffering, ended, unstarted) -> COVER WITH POSTER
-              // Keep the poster covering on the very first unstarted state (brief) and
-              // whenever the player actually goes to a non-playing state after starting.
-              // Keep poster visible only until the first actual frame displays.
-              // After first reveal, stay visible only during non-playing states
-              // to avoid startup flash without re-introducing a long delay.
-              setIsLoaded(hasShown);
+              if (loadTimer) clearTimeout(loadTimer);
+              isLoadedRef.current = false;
+              setIsLoaded(false);
 
               if (evt.data === 2 || evt.data === -1 || evt.data === 5) {
                 try { evt.target.playVideo(); } catch { }
@@ -220,25 +182,16 @@ function YouTubeSlide({
               }
             }
           },
-          onApiChange: () => {
-            // Fired once the player loads/unloads its modules — the reliable
-            // moment to strip captions for good.
-            if (!playerRef.current || !isMountedRef.current) return;
-            try {
-              playerRef.current.unloadModule("captions");
-              playerRef.current.unloadModule("cc");
-            } catch { }
-          },
         },
       });
     });
 
     return () => {
       isMountedRef.current = false;
+      if (loadTimer) clearTimeout(loadTimer);
       if (pollInterval) clearInterval(pollInterval);
+      isLoadedRef.current = false;
       setIsLoaded(false);
-    setHasShown(false);
-      hasPlayedOnceRef.current = false;
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch { }
         playerRef.current = null;
@@ -248,169 +201,115 @@ function YouTubeSlide({
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-black select-none pointer-events-none">
-      {/* High-res poster backdrop */}
-      <Image
-        src={posterUrl}
-        alt="Video poster"
-        fill
-        sizes="100vw"
-        className={cn(
-          "object-cover z-20 transition-opacity duration-300",
-          isLoaded && hasShown ? "opacity-0" : "opacity-100"
-        )}
-        priority={isActive}
-      />
-
-      {/* Embedded player via youtube-nocookie.com */}
       {isActive && (
         <div
-          className={cn(
-            "absolute pointer-events-none transition-opacity duration-300 [&_iframe]:pointer-events-none",
-            isLoaded && hasShown ? "opacity-100" : "opacity-0"
-          )}
+          className="absolute pointer-events-none"
           style={{
             top: "50%",
             left: "50%",
-            transform: "translate(-50%, -50%) scale(1.5)",
+            transform: "translate(-50%, -50%)",
             width: "max(100vw, calc(100vh * 16 / 9))",
             aspectRatio: "16 / 9",
           }}
         >
-          <div ref={containerRef} className="w-full h-full pointer-events-none [&_iframe]:pointer-events-none" />
+          <div ref={containerRef} className="w-full h-full" />
         </div>
       )}
 
-      { /* Center play/pause overlay shown momentarily by some browsers
-          at startup. Block it with a neutral layer that never captures
-          hover. */ }
-      <div className="absolute inset-0 z-20 pointer-events-none" aria-hidden="true" />
+      {isActive && (
+        <div
+          className={`absolute pointer-events-none transition-opacity duration-500 ${isLoaded ? "opacity-0" : "opacity-100"
+            }`}
+          style={{
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "max(100vw, calc(100vh * 16 / 9))",
+            aspectRatio: "16 / 9",
+          }}
+        >
+          <Image
+            src={posterUrl}
+            alt={`${headline} video poster ${slideIndex + 1}`}
+            fill
+            sizes="100vw"
+            priority={isActive}
+            className="object-cover"
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-
-
-
-
-function renderBadge(text?: string | null) {
-  const badge = text?.trim();
-  if (!badge) return null;
-
-  if (badge.includes("•")) {
-    const parts = badge.split("•");
-    return (
-      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/80 border border-white/15 shadow-sm backdrop-blur-md">
-        <span className="w-2 h-2 rounded-full bg-[#ff5722] shadow-[0_0_8px_#ff5722]" />
-        <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-100">
-          {parts[0].trim()}
-        </span>
-        <span className="text-white/40">•</span>
-        <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#00e676]">
-          {parts.slice(1).join("•").trim()}
-        </span>
-      </div>
-    );
-  }
-
+// ─── Glossy 3D "M" Graphic matching mockup media_1789970002288.png ─────────────
+function Milanova3DGraphic() {
   return (
-    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/80 border border-white/15 shadow-sm backdrop-blur-md">
-      <span className="w-2 h-2 rounded-full bg-[#ff5722] shadow-[0_0_8px_#ff5722]" />
-      <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-100">
-        {badge}
-      </span>
+    <div className="relative w-full max-w-[360px] sm:max-w-[440px] lg:max-w-[500px] aspect-square flex items-center justify-center pointer-events-none drop-shadow-2xl">
+      <div className="absolute inset-4 rounded-full bg-[#38bdf8]/25 blur-3xl pointer-events-none" />
+
+      <svg
+        viewBox="0 0 500 500"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-full h-full transform hover:scale-[1.02] transition-transform duration-700 relative z-10"
+      >
+        <defs>
+          <linearGradient id="m3d-body" x1="60" y1="60" x2="440" y2="440" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#8cdcfb" />
+            <stop offset="25%" stopColor="#38bdf8" />
+            <stop offset="60%" stopColor="#007799" />
+            <stop offset="100%" stopColor="#004558" />
+          </linearGradient>
+
+          <linearGradient id="m3d-left-leg" x1="100" y1="100" x2="170" y2="420" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#7ad5f9" />
+            <stop offset="50%" stopColor="#007799" />
+            <stop offset="100%" stopColor="#004558" />
+          </linearGradient>
+
+          <linearGradient id="m3d-right-leg" x1="370" y1="130" x2="440" y2="430" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#38bdf8" />
+            <stop offset="55%" stopColor="#00627c" />
+            <stop offset="100%" stopColor="#003747" />
+          </linearGradient>
+
+          <linearGradient id="m3d-center-arch" x1="170" y1="110" x2="350" y2="310" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#e2f5fc" />
+            <stop offset="35%" stopColor="#38bdf8" />
+            <stop offset="85%" stopColor="#00627c" />
+          </linearGradient>
+
+          <filter id="m3d-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="22" stdDeviation="18" floodColor="#004558" floodOpacity="0.28" />
+          </filter>
+        </defs>
+
+        <g filter="url(#m3d-shadow)">
+          <path
+            d="M 390 140 A 55 55 0 0 1 445 195 L 445 370 A 55 55 0 0 1 335 370 L 335 240 Z"
+            fill="url(#m3d-right-leg)"
+          />
+          <path
+            d="M 110 195 C 110 130, 160 110, 220 160 L 290 220 C 330 255, 380 230, 390 180 L 390 350 A 55 55 0 0 1 280 350 L 280 270 L 210 210 C 185 190, 165 200, 165 225 L 165 370 A 55 55 0 0 1 55 370 L 55 195 A 55 55 0 0 1 110 195 Z"
+            fill="url(#m3d-body)"
+          />
+          <path
+            d="M 165 195 C 165 140, 230 130, 280 185 L 340 240 C 375 270, 445 220, 445 195 A 55 55 0 0 0 335 195 L 265 135 C 210 90, 110 120, 110 195 Z"
+            fill="url(#m3d-center-arch)"
+            opacity="0.95"
+          />
+          <path
+            d="M 75 195 C 75 160, 100 135, 135 135 C 170 135, 210 160, 245 190"
+            stroke="#ffffff"
+            strokeWidth="11"
+            strokeLinecap="round"
+            opacity="0.45"
+          />
+        </g>
+      </svg>
     </div>
   );
-}
-
-function renderStyledHeadline(headline: string, highlight?: string | null) {
-  if (!headline) return null;
-  const targetHighlight = highlight?.trim() || (headline.includes("Gas & Pipeline") ? "Gas & Pipeline" : null);
-
-  if (targetHighlight && headline.includes(targetHighlight)) {
-    const parts = headline.split(targetHighlight);
-    return (
-      <>
-        {parts[0]}
-        <span className="text-[#ff5722] drop-shadow-sm">{targetHighlight}</span>
-        {parts.slice(1).join(targetHighlight)}
-      </>
-    );
-  }
-  return headline;
-}
-
-function renderStyledSubHeadline(text: string) {
-  if (!text) return null;
-  if (text.includes("Digital Gas Service")) {
-    const parts = text.split("Digital Gas Service");
-    return (
-      <>
-        {parts[0]}
-        <strong className="text-[#ff5722] font-bold">Digital Gas Service</strong>
-        {parts[1]}
-      </>
-    );
-  }
-  return text;
-}
-
-function resolveCtaAction(label?: string | null, link?: string | null, isPrimary = true) {
-  const trimmedLink = (link || "").trim();
-  const trimmedLabel = (label || "").trim();
-  const lowerLink = trimmedLink.toLowerCase();
-  const lowerLabel = trimmedLabel.toLowerCase();
-
-  // WhatsApp detection
-  const isWaLink = lowerLink.includes("wa.me") || lowerLink.includes("whatsapp.com") || lowerLink.startsWith("whatsapp:");
-  const isWaLabel = lowerLabel.includes("whatsapp");
-
-  if (isWaLink || isWaLabel) {
-    let href = trimmedLink;
-    if (!lowerLink.startsWith("http")) {
-      const digits = trimmedLink.replace(/[^\d+]/g, "").replace(/^\+/, "");
-      href = `https://wa.me/${digits || "8801778277178"}`;
-    }
-    return {
-      href,
-      isExternal: true,
-      icon: (
-        <svg className="w-4 h-4 fill-current text-[#25D366] shrink-0" viewBox="0 0 24 24">
-          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
-        </svg>
-      ),
-    };
-  }
-
-  // Phone number detection
-  const isTelLink = lowerLink.startsWith("tel:");
-  const isPhoneLink = /^(\+?[\d\s-]{7,18})$/.test(trimmedLink);
-  const isPhoneLabel = /^(\+?[\d\s-]{7,18})$/.test(trimmedLabel);
-
-  if (isTelLink || isPhoneLink || (isPhoneLabel && (!trimmedLink || trimmedLink === "#" || !lowerLink.startsWith("http")))) {
-    const rawNumber = isTelLink ? trimmedLink.replace("tel:", "") : (isPhoneLink ? trimmedLink : trimmedLabel);
-    const digits = rawNumber.replace(/[^\d+]/g, "");
-    return {
-      href: `tel:${digits}`,
-      isExternal: false,
-      icon: <Phone className="w-4 h-4 text-[#ff5722] shrink-0" />,
-    };
-  }
-
-  // Email
-  if (lowerLink.startsWith("mailto:") || (lowerLink.includes("@") && !lowerLink.includes("/"))) {
-    return {
-      href: lowerLink.startsWith("mailto:") ? trimmedLink : `mailto:${trimmedLink}`,
-      isExternal: false,
-      icon: <Mail className="w-4 h-4 text-sky-400 shrink-0" />,
-    };
-  }
-
-  // Regular page link or external URL
-  return {
-    href: trimmedLink || "#",
-    isExternal: trimmedLink.startsWith("http"),
-    icon: isPrimary ? <Wrench className="w-4 h-4 shrink-0" /> : <ArrowRight className="w-4 h-4 text-[#ff5722] shrink-0" />,
-  };
 }
 
 export default function Hero({ activeHero }: HeroProps) {
@@ -424,14 +323,12 @@ export default function Hero({ activeHero }: HeroProps) {
   const siteConfig = useSiteConfig();
   const [activeIdx, setActiveIdx] = useState(0);
 
-  const headline = activeHero?.headline || "Safe & Reliable Gas & Pipeline Engineering Solutions";
-  const highlightText = activeHero?.highlight_text;
-  const badgeText = activeHero?.badge_text;
+  const headline = activeHero?.headline || siteConfig.company_name || "Digital Futures That Drive Impact";
   const subHeadline = activeHero?.sub_headline || "";
-  const primaryCtaLabel = activeHero?.primary_cta_label || "Explore Services";
-  const primaryCtaLink = activeHero?.primary_cta_link || "#services";
-  const secondaryCtaLabel = activeHero?.secondary_cta_label;
-  const secondaryCtaLink = activeHero?.secondary_cta_link;
+  const primaryCtaLabel = activeHero?.primary_cta_label || "Book a Consultation";
+  const primaryCtaLink = activeHero?.primary_cta_link || "#";
+  const secondaryCtaLabel = activeHero?.secondary_cta_label || "View Projects";
+  const secondaryCtaLink = activeHero?.secondary_cta_link || "#";
 
   const slides = useMemo<{ type: "image" | "youtube"; url: string; youtubeId: string | null }[]>(() => {
     const media = activeHero?.media ?? [];
@@ -451,12 +348,6 @@ export default function Hero({ activeHero }: HeroProps) {
   const mediaCount = slides.length;
   const hasMedia = mediaCount > 0;
   const currentIsVideo = hasMedia && slides[activeIdx]?.type === "youtube";
-
-  useEffect(() => {
-    if (slides.some((s) => s.type === "youtube")) {
-      loadYouTubeApi();
-    }
-  }, [slides]);
 
   useEffect(() => {
     const swiper = swiperRef.current;
@@ -491,6 +382,7 @@ export default function Hero({ activeHero }: HeroProps) {
           alt={`${headline} video poster`}
           fill
           priority
+          fetchPriority="high"
           sizes="100vw"
           className="object-cover"
         />
@@ -517,7 +409,10 @@ export default function Hero({ activeHero }: HeroProps) {
   return (
     <section
       id="home"
-      className="relative w-full min-h-[90vh] lg:min-h-screen flex items-center overflow-hidden select-none bg-gradient-to-br from-[#012543] via-[#023b65] to-[#011c33] text-white py-20 lg:py-28 [&_.swiper-pagination]:!bottom-6 [&_.swiper-pagination]:!text-center [&_.swiper-pagination]:!w-full"
+      className={`relative w-full h-[75vh] sm:h-[85vh] lg:h-screen flex items-center overflow-hidden select-none ${hasMedia
+          ? "bg-zinc-950 text-white"
+          : "bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#e3f4fb] via-[#f4fbfd] to-white text-[#00627c]"
+        } [&_.swiper-pagination]:!bottom-6 [&_.swiper-pagination]:!text-center [&_.swiper-pagination]:!w-full`}
     >
       {/* ── FULL-BLEED BACKGROUND MEDIA SLIDER ────────────────────── */}
       {hasMedia && (
@@ -533,7 +428,7 @@ export default function Hero({ activeHero }: HeroProps) {
               speed={1500}
               slidesPerView={1}
               centeredSlides={true}
-              allowTouchMove={false}
+              allowTouchMove={true}
               onSwiper={(swiper) => {
                 swiperRef.current = swiper;
                 const firstIsVideo = slides[0]?.type === "youtube";
@@ -583,100 +478,106 @@ export default function Hero({ activeHero }: HeroProps) {
             </Swiper>
           )}
 
-          {/* Scrim Overlay — Rich black gradient overlay for crisp text contrast */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/55 z-10 pointer-events-auto" />
+          {/* Scrim Overlay — Ensures text contrast over full-bleed media */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/20 z-10 pointer-events-none" />
         </div>
       )}
 
       {/* ── HERO CONTENT OVERLAY ──────────────────────────────────── */}
-      <div className="relative z-20 w-full container mx-auto px-6 sm:px-10 lg:px-16 py-12">
-        <div className="max-w-3xl space-y-6 text-left flex flex-col items-start justify-center">
-          {/* Top Badge */}
-          {renderBadge(badgeText)}
+      <div className="relative z-20 w-full container mx-auto px-6 sm:px-10 lg:px-16 py-16 sm:py-24">
+        {hasMedia ? (
+          /* Dark full-bleed text overlay */
+          <div className="max-w-2xl space-y-4 sm:space-y-6 text-left flex flex-col items-start justify-center">
+            {/* 1st Element: Main Headline (Color: #00668a) */}
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-[#00668a] leading-[1.08] tracking-tight font-sans">
+              {headline}
+            </h1>
 
-          {/* Main Headline */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-[1.12] tracking-tight font-sans drop-shadow-md">
-            {renderStyledHeadline(headline, highlightText)}
-          </h1>
+            {/* 2nd Element: Sub-headline / Intro Description */}
+            {subHeadline && (
+              <p className="text-[#526167] text-base sm:text-lg leading-relaxed max-w-xl font-normal font-sans">
+                {subHeadline}
+              </p>
+            )}
 
-          {/* Sub-headline / Intro Description */}
-          {subHeadline && (
-            <p className="text-slate-200/95 text-sm sm:text-base leading-relaxed max-w-2xl font-normal font-sans drop-shadow-sm">
-              {renderStyledSubHeadline(subHeadline)}
-            </p>
-          )}
-
-          {/* 3 Static Feature Badges — 100% Frontend Design */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl pt-2">
-            <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-black/65 border border-white/10 backdrop-blur-md shadow-sm transition-transform duration-300 hover:translate-y-[-2px]">
-              <div className="p-2 rounded-lg bg-[#ff5722]/15 text-[#ff5722] flex-shrink-0">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white leading-tight">100% Safety Standard</h4>
-                <p className="text-[10px] text-slate-300">NFPA 58 & BNBC Compliant</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-black/65 border border-white/10 backdrop-blur-md shadow-sm transition-transform duration-300 hover:translate-y-[-2px]">
-              <div className="p-2 rounded-lg bg-[#00e676]/15 text-[#00e676] flex-shrink-0">
-                <Users className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white leading-tight">Certified Engineers</h4>
-                <p className="text-[10px] text-slate-300">Mechanical & Pipeline</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-black/65 border border-white/10 backdrop-blur-md shadow-sm transition-transform duration-300 hover:translate-y-[-2px]">
-              <div className="p-2 rounded-lg bg-sky-400/15 text-sky-400 flex-shrink-0">
-                <Headphones className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white leading-tight">24/7 Rapid Emergency</h4>
-                <p className="text-[10px] text-slate-300">Quick Response Unit</p>
-              </div>
-            </div>
-          </div>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-row items-center gap-4 pt-3 flex-wrap">
-            {primaryCtaLabel && (() => {
-              const cta = resolveCtaAction(primaryCtaLabel, primaryCtaLink, true);
-              return (
-                <a
-                  href={cta.href}
-                  target={cta.isExternal ? "_blank" : undefined}
-                  rel={cta.isExternal ? "noopener noreferrer" : undefined}
-                  className="inline-flex items-center justify-center h-12 px-7 rounded-xl bg-[#ff5722] hover:bg-[#e64a19] text-white transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide gap-2 border-none shadow-xl shadow-orange-500/20 cursor-pointer"
+            {/* 4th Element: CTA Buttons */}
+            <div className="flex flex-row items-center gap-3.5 pt-3 flex-wrap">
+              {primaryCtaLabel && (
+                <Button
+                  size="lg"
+                  className="h-12 px-7 rounded-lg bg-[#00668a] text-white hover:bg-[#004c69] transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 border-none shadow-xl cursor-pointer"
+                  onClick={() => (window.location.href = primaryCtaLink)}
                 >
-                  {cta.icon}
                   <span>{primaryCtaLabel}</span>
-                </a>
-              );
-            })()}
+                  <ExternalLink size={15} />
+                </Button>
+              )}
 
-            {secondaryCtaLabel && (() => {
-              const cta = resolveCtaAction(secondaryCtaLabel, secondaryCtaLink, false);
-              return (
-                <a
-                  href={cta.href}
-                  target={cta.isExternal ? "_blank" : undefined}
-                  rel={cta.isExternal ? "noopener noreferrer" : undefined}
-                  className="inline-flex items-center justify-center h-12 px-7 rounded-xl bg-white hover:bg-slate-100 text-slate-900 transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide gap-2 shadow-xl cursor-pointer border-none"
+              {secondaryCtaLabel && (
+                <Button
+                  size="lg"
+                  className="h-12 px-7 rounded-lg bg-transparent border border-[#00668a] text-[#00668a] hover:bg-[#00668a]/10 transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 shadow-xl backdrop-blur-md cursor-pointer"
+                  onClick={() => (window.location.href = secondaryCtaLink || "#")}
                 >
-                  {cta.icon}
                   <span>{secondaryCtaLabel}</span>
-                </a>
-              );
-            })()}
+                  <ArrowRight size={15} />
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Light theme 2-column layout matching exact mockup media_1789970002288.png */
+          <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+            <div className="lg:col-span-7 space-y-5 text-left flex flex-col items-start justify-center">
+              {/* 1st Element: Main Headline (Color: #00668a) */}
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#00668a] leading-[1.08] tracking-tight font-sans">
+                {headline}
+              </h1>
+
+              {/* 2nd Element: Sub-headline / Intro Description */}
+              {subHeadline && (
+                <p className="text-[#526167] text-base sm:text-lg leading-relaxed max-w-xl font-normal font-sans">
+                  {subHeadline}
+                </p>
+              )}
+
+              {/* 4th Element: CTA Buttons */}
+              <div className="flex flex-row items-center gap-3.5 pt-2 flex-wrap">
+                {primaryCtaLabel && (
+                  <Button
+                    size="lg"
+                    className="h-12 px-7 rounded-lg bg-[#00668a] hover:bg-[#004c69] text-white transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 border-none shadow-lg cursor-pointer"
+                    onClick={() => (window.location.href = primaryCtaLink)}
+                  >
+                    <span>{primaryCtaLabel}</span>
+                    <ExternalLink size={15} />
+                  </Button>
+                )}
+
+                {secondaryCtaLabel && (
+                  <Button
+                    size="lg"
+                    className="h-12 px-7 rounded-lg bg-transparent border border-[#00668a] text-[#00668a] hover:bg-[#00668a]/5 transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                    onClick={() => (window.location.href = secondaryCtaLink || "#")}
+                  >
+                    <span>{secondaryCtaLabel}</span>
+                    <ArrowRight size={15} />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="lg:col-span-5 flex items-center justify-center lg:justify-end">
+              <Milanova3DGraphic />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── BOTTOM RIGHT SCROLL INDICATOR ───────────────────────── */}
       <div
-        className="absolute bottom-6 right-8 z-30 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest pointer-events-none text-white/70"
+        className={`absolute bottom-6 right-8 z-30 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest pointer-events-none ${hasMedia ? "text-white/70" : "text-[#00627c]/70"
+          }`}
       >
         <ChevronDown size={14} className="animate-bounce" />
         <span>Scroll For More</span>

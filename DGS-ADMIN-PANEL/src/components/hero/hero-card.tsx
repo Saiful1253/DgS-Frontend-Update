@@ -8,7 +8,7 @@ import "swiper/css";
 import "swiper/css/effect-fade";
 import { HeroSection, HeroImageOps } from "@/types/hero";
 import { Button } from "@/components/ui/button";
-import { Trash2, Pencil, ExternalLink, ArrowRight, Phone, Mail } from "lucide-react";
+import { Trash2, Pencil, ExternalLink, ArrowRight } from "lucide-react";
 import EditHeroModal from "./modals/edit-hero-modal";
 import DeleteHeroDialog from "./modals/delete-hero-dialog";
 import Image from "next/image";
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 interface HeroCardProps {
   hero: HeroSection;
+  hasManageAccess: boolean;
   onUpdate: (id: string | number, data: any, ops: HeroImageOps) => Promise<boolean>;
   onDeleted?: () => void | Promise<void>;
   cardHeight?: number;
@@ -74,12 +75,7 @@ function YouTubeSlide({
   const playerRef = useRef<any>(null);
   const isMountedRef = useRef(false);
   const hasTriggeredRef = useRef(false);
-  const hasPlayedOnceRef = useRef(false);
   const [isLoaded, setIsLoaded] = useState(false);
-
-  if (!isActive && isLoaded) {
-    setIsLoaded(false);
-  }
 
   const posterUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 
@@ -87,6 +83,7 @@ function YouTubeSlide({
     isMountedRef.current = true;
 
     if (!isActive) {
+      setIsLoaded(false);
       hasTriggeredRef.current = false;
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch { }
@@ -95,8 +92,8 @@ function YouTubeSlide({
       return () => { isMountedRef.current = false; };
     }
 
-    hasPlayedOnceRef.current = false;
-    setIsLoaded(false);
+    hasTriggeredRef.current = false;
+    let loadTimer: NodeJS.Timeout | null = null;
     let pollInterval: NodeJS.Timeout | null = null;
 
     loadYouTubeApi().then(() => {
@@ -121,12 +118,6 @@ function YouTubeSlide({
           playsinline: 1,
           iv_load_policy: 3,
           showinfo: 0,
-          cc_load_policy: 0,
-          // `cc_load_policy` only means "follow the viewer's own prefs" — a
-          // logged-in viewer with captions ON still gets subtitles. Pointing
-          // the caption language at a code that does not exist means no track
-          // can ever be selected, so no subtitle text is drawn.
-          cc_lang_pref: "invalid",
           autohide: 1,
           // DO NOT set `playlist` parameter — playlist mode renders |◀ || ▶| overlay controls!
           origin: typeof window !== "undefined" ? window.location.origin : undefined,
@@ -144,18 +135,14 @@ function YouTubeSlide({
             if (!isMountedRef.current) return;
 
             if (evt.data === 1) {
-              // PLAYING -> show the video straight away. The overscan crop and
-              // the hover shield already keep YouTube's chrome out of sight,
-              // so no masking delay is needed here.
+              // PLAYING -> delay 1000ms then reveal clean video
               try { evt.target.setPlaybackQuality("hd1080"); } catch { }
-              // Belt-and-braces: drop the captions modules outright, so a
-              // viewer's saved subtitle preference can never draw text.
-              try {
-                evt.target.unloadModule("captions");
-                evt.target.unloadModule("cc");
-              } catch { }
-              setIsLoaded(true);
-              hasPlayedOnceRef.current = true;
+              if (loadTimer) clearTimeout(loadTimer);
+              loadTimer = setTimeout(() => {
+                if (isMountedRef.current) {
+                  setIsLoaded(true);
+                }
+              }, 1000);
 
               // Monitor playback time to loop or advance slide BEFORE video end-screen
               if (pollInterval) clearInterval(pollInterval);
@@ -164,7 +151,6 @@ function YouTubeSlide({
                 try {
                   const curr = playerRef.current.getCurrentTime();
                   const dur = playerRef.current.getDuration();
-
                   if (dur > 0 && curr >= dur - 0.4) {
                     if (loop) {
                       playerRef.current.seekTo(0, true);
@@ -177,8 +163,8 @@ function YouTubeSlide({
                 } catch { }
               }, 100);
             } else {
-              // NOT PLAYING (paused, buffering, ended, unstarted) -> COVER WITH POSTER
-              // Keep the poster covering until playback actually starts.
+              // NOT PLAYING (paused, buffering, ended, unstarted) -> INSTANTLY HIDE IFRAME
+              if (loadTimer) clearTimeout(loadTimer);
               setIsLoaded(false);
 
               if (evt.data === 2 || evt.data === -1 || evt.data === 5) {
@@ -193,24 +179,15 @@ function YouTubeSlide({
               }
             }
           },
-          onApiChange: () => {
-            // Fired once the player loads/unloads its modules — the reliable
-            // moment to strip captions for good.
-            if (!playerRef.current || !isMountedRef.current) return;
-            try {
-              playerRef.current.unloadModule("captions");
-              playerRef.current.unloadModule("cc");
-            } catch { }
-          },
         },
       });
     });
 
     return () => {
       isMountedRef.current = false;
+      if (loadTimer) clearTimeout(loadTimer);
       if (pollInterval) clearInterval(pollInterval);
       setIsLoaded(false);
-      hasPlayedOnceRef.current = false;
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch { }
         playerRef.current = null;
@@ -226,10 +203,7 @@ function YouTubeSlide({
         alt="Video poster"
         fill
         sizes="(max-width: 768px) 100vw, 50vw"
-        className={cn(
-          "object-cover z-20 transition-opacity duration-500",
-          isLoaded ? "opacity-0" : "opacity-100"
-        )}
+        className="object-cover"
         priority={isActive}
       />
 
@@ -237,88 +211,28 @@ function YouTubeSlide({
       {isActive && (
         <div
           className={cn(
-            "absolute pointer-events-none transition-opacity duration-500 [&_iframe]:pointer-events-none",
+            "absolute pointer-events-none transition-opacity duration-500",
             isLoaded ? "opacity-100" : "opacity-0"
           )}
           style={{
             top: "50%",
             left: "50%",
-            transform: "translate(-50%, -50%) scale(1.5)",
+            transform: "translate(-50%, -50%)",
             width: "max(100%, calc(220px * 16 / 9))",
             aspectRatio: "16 / 9",
           }}
         >
-          <div ref={containerRef} className="w-full h-full pointer-events-none [&_iframe]:pointer-events-none" />
+          <div ref={containerRef} className="w-full h-full" />
         </div>
       )}
-
-      { /* Center play/pause overlay blocker */ }
-      <div className="absolute inset-0 z-20 pointer-events-none" aria-hidden="true" />
     </div>
   );
 }
 
 
 
-function resolveCtaAction(label?: string | null, link?: string | null, isPrimary = true) {
-  const trimmedLink = (link || "").trim();
-  const trimmedLabel = (label || "").trim();
-  const lowerLink = trimmedLink.toLowerCase();
-  const lowerLabel = trimmedLabel.toLowerCase();
-
-  // WhatsApp detection
-  const isWaLink = lowerLink.includes("wa.me") || lowerLink.includes("whatsapp.com") || lowerLink.startsWith("whatsapp:");
-  const isWaLabel = lowerLabel.includes("whatsapp");
-
-  if (isWaLink || isWaLabel) {
-    let href = trimmedLink;
-    if (!lowerLink.startsWith("http")) {
-      const digits = (trimmedLink || trimmedLabel).replace(/[^\d+]/g, "").replace(/^\+/, "");
-      href = `https://wa.me/${digits || "8801778277178"}`;
-    }
-    return {
-      href,
-      isExternal: true,
-      icon: (
-        <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current text-[#25D366] shrink-0" viewBox="0 0 24 24">
-          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
-        </svg>
-      ),
-    };
-  }
-
-  // Phone number detection
-  const isTelLink = lowerLink.startsWith("tel:");
-  const isPhoneLink = /^(\+?[\d\s-]{7,18})$/.test(trimmedLink);
-  const isPhoneLabel = /^(\+?[\d\s-]{7,18})$/.test(trimmedLabel);
-
-  if (isTelLink || isPhoneLink || (isPhoneLabel && !lowerLink.startsWith("http") && !lowerLink.startsWith("/"))) {
-    const digits = (isTelLink ? trimmedLink.replace("tel:", "") : (isPhoneLink ? trimmedLink : trimmedLabel)).replace(/[^\d+]/g, "");
-    return {
-      href: `tel:${digits}`,
-      isExternal: false,
-      icon: <Phone className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#ff5722] shrink-0" />,
-    };
-  }
-
-  // Email
-  if (lowerLink.startsWith("mailto:") || (lowerLink.includes("@") && !lowerLink.includes("/"))) {
-    return {
-      href: lowerLink.startsWith("mailto:") ? trimmedLink : `mailto:${trimmedLink || trimmedLabel}`,
-      isExternal: false,
-      icon: <Mail className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-sky-400 shrink-0" />,
-    };
-  }
-
-  return {
-    href: trimmedLink || "#",
-    isExternal: trimmedLink.startsWith("http"),
-    icon: isPrimary ? <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> : <ArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#ff5722]" />,
-  };
-}
-
 // ─── Main Hero Card ───────────────────────────────────────────────────────
-export default function HeroCard({ hero, onUpdate, onDeleted, cardHeight, onMeasureHeight }: HeroCardProps) {
+export default function HeroCard({ hero, hasManageAccess, onUpdate, onDeleted, cardHeight, onMeasureHeight }: HeroCardProps) {
   const swiperRef = useRef<any>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -458,78 +372,39 @@ export default function HeroCard({ hero, onUpdate, onDeleted, cardHeight, onMeas
           ref={contentRef}
           className="flex flex-col justify-center px-4 sm:px-7 py-4 sm:py-5 space-y-2 w-full pt-12 sm:pt-5 sm:max-w-[calc(100%-260px)]"
         >
-          {/* Top Badge */}
-          {hero.badge_text && (
-            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#021f36]/90 border border-white/15 w-fit shadow-xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#ff5722] shadow-[0_0_6px_#ff5722]" />
-              <span className="text-[8px] font-extrabold uppercase tracking-wider text-slate-100 truncate max-w-[280px]">
-                {hero.badge_text}
-              </span>
-            </div>
-          )}
-
-          {/* 1st Element: Main headline — bold white text with highlight */}
+          {/* 1st Element: Main headline — bold white text */}
           <h3
             className="font-black text-white leading-tight tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] break-words"
             style={{ fontSize: "clamp(0.95rem, 2.2vw, 1.55rem)" }}
           >
-            {hero.highlight_text && hero.headline?.includes(hero.highlight_text) ? (
-              <>
-                {hero.headline.split(hero.highlight_text)[0]}
-                <span className="text-[#ff5722]">{hero.highlight_text}</span>
-                {hero.headline.split(hero.highlight_text).slice(1).join(hero.highlight_text)}
-              </>
-            ) : (
-              hero.headline || "Untitled Hero"
-            )}
+            {hero.headline || "Untitled Hero"}
           </h3>
 
-          {/* 2nd Element: Sub-headline / Intro Text */}
+          {/* 2nd Element: Sub-headline / Intro Text — cerulean uppercase */}
           {hero.sub_headline && (
             <p
-              className="text-[9px] sm:text-[10px] font-medium text-slate-200 leading-snug break-words drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)] line-clamp-2"
+              className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#7dd3fc] leading-snug break-words drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)] line-clamp-3 sm:line-clamp-none"
               title={hero.sub_headline}
             >
               {hero.sub_headline}
             </p>
           )}
 
-
-          {/* 3rd Element: CTA Buttons */}
+          {/* 3rd Element: CTA Buttons — solid primary + dark translucent outline */}
           {(hero.primary_cta_label || hero.secondary_cta_label) && (
             <div className="flex items-center gap-1.5 sm:gap-2 pt-1 flex-wrap">
-              {hero.primary_cta_label && (() => {
-                const cta = resolveCtaAction(hero.primary_cta_label, hero.primary_cta_link, true);
-                return (
-                  <a
-                    href={cta.href}
-                    target={cta.isExternal ? "_blank" : undefined}
-                    rel={cta.isExternal ? "noopener noreferrer" : undefined}
-                    onClick={(e) => e.stopPropagation()}
-                    title={cta.href}
-                    className="inline-flex items-center gap-1 sm:gap-1.5 h-6 sm:h-7 px-2.5 sm:px-3.5 rounded-md bg-[#ff5722] hover:bg-[#e64a19] text-white text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest shadow-md transition-all cursor-pointer"
-                  >
-                    <span>{hero.primary_cta_label}</span>
-                    {cta.icon}
-                  </a>
-                );
-              })()}
-              {hero.secondary_cta_label && (() => {
-                const cta = resolveCtaAction(hero.secondary_cta_label, hero.secondary_cta_link, false);
-                return (
-                  <a
-                    href={cta.href}
-                    target={cta.isExternal ? "_blank" : undefined}
-                    rel={cta.isExternal ? "noopener noreferrer" : undefined}
-                    onClick={(e) => e.stopPropagation()}
-                    title={cta.href}
-                    className="inline-flex items-center gap-1 sm:gap-1.5 h-6 sm:h-7 px-2.5 sm:px-3.5 rounded-md bg-white hover:bg-slate-100 text-slate-900 border border-slate-200 text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest shadow-xs transition-all cursor-pointer"
-                  >
-                    {cta.icon}
-                    <span>{hero.secondary_cta_label}</span>
-                  </a>
-                );
-              })()}
+              {hero.primary_cta_label && (
+                <span className="inline-flex items-center gap-1 sm:gap-1.5 h-6 sm:h-7 px-2.5 sm:px-3.5 rounded-md bg-[#00668a] hover:bg-[#004c69] text-white text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest shadow-md cursor-default transition-all">
+                  {hero.primary_cta_label}
+                  <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                </span>
+              )}
+              {hero.secondary_cta_label && (
+                <span className="inline-flex items-center gap-1 sm:gap-1.5 h-6 sm:h-7 px-2.5 sm:px-3.5 rounded-md bg-[#121d24]/90 border border-white/20 text-white text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest backdrop-blur-sm cursor-default transition-all">
+                  {hero.secondary_cta_label}
+                  <ArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -546,6 +421,7 @@ export default function HeroCard({ hero, onUpdate, onDeleted, cardHeight, onMeas
             <button
               key={s}
               onClick={(e) => handleStatusChange(e, s)}
+              disabled={!hasManageAccess}
               title={s === "active" ? "Active (exclusive)" : s.charAt(0).toUpperCase() + s.slice(1)}
               className={cn(
                 "px-1.5 sm:px-2.5 py-0.5 rounded-full text-[7px] sm:text-[8px] font-extrabold uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer",
@@ -568,6 +444,7 @@ export default function HeroCard({ hero, onUpdate, onDeleted, cardHeight, onMeas
           <EditHeroModal
             hero={hero}
             onSave={(data, ops) => onUpdate(hero.id, data, ops)}
+            disabled={!hasManageAccess}
             trigger={
               <Button variant="ghost" size="icon" className="h-6 w-6 text-white/80 hover:text-green-400 hover:bg-white/10 rounded-lg">
                 <Pencil size={12} />
@@ -577,6 +454,7 @@ export default function HeroCard({ hero, onUpdate, onDeleted, cardHeight, onMeas
           <DeleteHeroDialog
             hero={hero}
             onDeleted={onDeleted}
+            disabled={!hasManageAccess}
             trigger={
               <Button variant="ghost" size="icon" className="h-6 w-6 text-white/80 hover:text-red-400 hover:bg-white/10 rounded-lg">
                 <Trash2 size={12} />

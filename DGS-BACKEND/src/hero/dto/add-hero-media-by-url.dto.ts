@@ -1,7 +1,7 @@
 import { IsString, IsNotEmpty, IsOptional, IsInt, IsBoolean, IsIn, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export const HERO_MEDIA_TYPES = ['image', 'youtube'] as const;
+export const HERO_MEDIA_TYPES = ['image', 'youtube', 'video'] as const;
 
 export type HeroMediaType = (typeof HERO_MEDIA_TYPES)[number];
 
