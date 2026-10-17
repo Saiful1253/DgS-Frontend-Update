@@ -31,7 +31,7 @@ const nextConfig = {
       },
     ],
   },
-  reactCompiler: true,
+  // reactCompiler: true, // disabled: causes high CPU/RAM runaway on dev compile
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
