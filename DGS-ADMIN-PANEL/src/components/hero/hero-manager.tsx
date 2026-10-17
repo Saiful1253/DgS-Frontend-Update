@@ -567,6 +567,7 @@ export default function HeroManager({
               <HeroCard
                 key={hero.id}
                 hero={hero}
+                hasManageAccess={true}
                 onUpdate={handleHeroUpdate}
                 onDeleted={async () => {
                   setHeroes((prev) => prev.filter((h) => h.id !== hero.id));

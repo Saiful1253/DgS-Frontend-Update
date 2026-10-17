@@ -232,7 +232,7 @@ function YouTubeSlide({
 
 
 // ─── Main Hero Card ───────────────────────────────────────────────────────
-export default function HeroCard({ hero, hasManageAccess, onUpdate, onDeleted, cardHeight, onMeasureHeight }: HeroCardProps) {
+export default function HeroCard({ hero, hasManageAccess = true, onUpdate, onDeleted, cardHeight, onMeasureHeight }: HeroCardProps) {
   const swiperRef = useRef<any>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeIdx, setActiveIdx] = useState(0);
