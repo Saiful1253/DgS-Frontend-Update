@@ -6,7 +6,7 @@ import { useSiteConfig } from "@/context/SiteConfigContext";
 
 export default function SplashScreen() {
   const siteConfig = useSiteConfig();
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
   const [isFading, setIsFading] = useState(false);
 
   useEffect(() => {
@@ -14,21 +14,23 @@ export default function SplashScreen() {
 
     const hasLoaded = sessionStorage.getItem("hasLoadedSplash");
     if (hasLoaded) {
-      const t = setTimeout(() => {
-        setShowSplash(false);
-      }, 0);
-      return () => clearTimeout(t);
+      return;
     }
 
-    // Start fade out after 1.5 seconds, then unmount 300ms later
+    // Show splash on first visit (after initial paint)
+    setTimeout(() => {
+      setShowSplash(true);
+    }, 0);
+
+    // Start fade out after 400ms, then unmount 250ms later
     const fadeTimeout = setTimeout(() => {
       setIsFading(true);
       const unmountTimeout = setTimeout(() => {
         setShowSplash(false);
         sessionStorage.setItem("hasLoadedSplash", "true");
-      }, 300);
+      }, 250);
       return () => clearTimeout(unmountTimeout);
-    }, 1500);
+    }, 400);
 
     return () => clearTimeout(fadeTimeout);
   }, []);
