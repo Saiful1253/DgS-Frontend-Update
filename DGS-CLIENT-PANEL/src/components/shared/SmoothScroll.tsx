@@ -9,35 +9,49 @@ export default function SmoothScroll() {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Initialize Lenis smooth scroll
-    const lenis = new Lenis({
-      duration: 0.8,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // premium easeOutExpon
-      orientation: "vertical",
-      gestureOrientation: "vertical",
-      smoothWheel: true,
-      wheelMultiplier: 1.3,
-      touchMultiplier: 1.5,
-    });
-
-    lenisRef.current = lenis;
-    (window as unknown as { lenis?: Lenis }).lenis = lenis;
-
-    // Animate loop
+    let lenis: Lenis | null = null;
     let rafId: number;
-    function raf(time: number) {
-      lenis.raf(time);
-      rafId = requestAnimationFrame(raf);
-    }
-    rafId = requestAnimationFrame(raf);
 
-    // Clean up
-    return () => {
-      cancelAnimationFrame(rafId);
-      lenis.destroy();
-      lenisRef.current = null;
-      delete (window as unknown as { lenis?: Lenis }).lenis;
+    const init = () => {
+      lenis = new Lenis({
+        duration: 0.8,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // premium easeOutExpon
+        orientation: "vertical",
+        gestureOrientation: "vertical",
+        smoothWheel: true,
+        wheelMultiplier: 1.3,
+        touchMultiplier: 1.5,
+      });
+
+      lenisRef.current = lenis;
+      (window as unknown as { lenis?: Lenis }).lenis = lenis;
+
+      function raf(time: number) {
+        lenis?.raf(time);
+        rafId = requestAnimationFrame(raf);
+      }
+      rafId = requestAnimationFrame(raf);
     };
+
+    if ("requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(init, { timeout: 1000 });
+      return () => {
+        window.cancelIdleCallback(idleId);
+        cancelAnimationFrame(rafId);
+        lenis?.destroy();
+        lenisRef.current = null;
+        delete (window as unknown as { lenis?: Lenis }).lenis;
+      };
+    } else {
+      const timer = setTimeout(init, 200);
+      return () => {
+        clearTimeout(timer);
+        cancelAnimationFrame(rafId);
+        lenis?.destroy();
+        lenisRef.current = null;
+        delete (window as unknown as { lenis?: Lenis }).lenis;
+      };
+    }
   }, []);
 
   // Scroll on route change or handle initial hashes
