@@ -8,11 +8,12 @@ import "swiper/css";
 import "swiper/css/effect-fade";
 import { HeroSection, HeroImageOps } from "@/types/hero";
 import { Button } from "@/components/ui/button";
-import { Trash2, Pencil, ExternalLink, ArrowRight } from "lucide-react";
+import { Trash2, Pencil, ExternalLink, ArrowRight, Phone, MessageCircle } from "lucide-react";
 import EditHeroModal from "./modals/edit-hero-modal";
 import DeleteHeroDialog from "./modals/delete-hero-dialog";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { resolveCta } from "@/lib/cta-resolver";
 
 interface HeroCardProps {
   hero: HeroSection;
@@ -75,16 +76,19 @@ function YouTubeSlide({
   const playerRef = useRef<any>(null);
   const isMountedRef = useRef(false);
   const hasTriggeredRef = useRef(false);
+  const isLoadedRef = useRef(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const posterUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+  if (!isActive && isLoaded) {
+    setIsLoaded(false);
+  }
 
   useEffect(() => {
     isMountedRef.current = true;
 
     if (!isActive) {
-      setIsLoaded(false);
       hasTriggeredRef.current = false;
+      isLoadedRef.current = false;
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch { }
         playerRef.current = null;
@@ -93,6 +97,7 @@ function YouTubeSlide({
     }
 
     hasTriggeredRef.current = false;
+    isLoadedRef.current = false;
     let loadTimer: NodeJS.Timeout | null = null;
     let pollInterval: NodeJS.Timeout | null = null;
 
@@ -119,7 +124,7 @@ function YouTubeSlide({
           iv_load_policy: 3,
           showinfo: 0,
           autohide: 1,
-          // DO NOT set `playlist` parameter — playlist mode renders |◀ || ▶| overlay controls!
+          cc_load_policy: 0,
           origin: typeof window !== "undefined" ? window.location.origin : undefined,
         },
         events: {
@@ -135,22 +140,27 @@ function YouTubeSlide({
             if (!isMountedRef.current) return;
 
             if (evt.data === 1) {
-              // PLAYING -> delay 1000ms then reveal clean video
-              try { evt.target.setPlaybackQuality("hd1080"); } catch { }
               if (loadTimer) clearTimeout(loadTimer);
               loadTimer = setTimeout(() => {
                 if (isMountedRef.current) {
+                  isLoadedRef.current = true;
                   setIsLoaded(true);
                 }
-              }, 1000);
+                }, 8000);
 
-              // Monitor playback time to loop or advance slide BEFORE video end-screen
               if (pollInterval) clearInterval(pollInterval);
               pollInterval = setInterval(() => {
                 if (!playerRef.current || !isMountedRef.current) return;
                 try {
                   const curr = playerRef.current.getCurrentTime();
                   const dur = playerRef.current.getDuration();
+
+                  // Keep YouTube's transient startup controls covered.
+                  if (!isLoadedRef.current && dur > 0 && curr >= 3.5) {
+                    isLoadedRef.current = true;
+                    setIsLoaded(true);
+                  }
+
                   if (dur > 0 && curr >= dur - 0.4) {
                     if (loop) {
                       playerRef.current.seekTo(0, true);
@@ -163,19 +173,19 @@ function YouTubeSlide({
                 } catch { }
               }, 100);
             } else {
-              // NOT PLAYING (paused, buffering, ended, unstarted) -> INSTANTLY HIDE IFRAME
               if (loadTimer) clearTimeout(loadTimer);
+              isLoadedRef.current = false;
               setIsLoaded(false);
 
-              if (evt.data === 2 || evt.data === -1 || evt.data === 5) {
+              if (evt.data === 0) {
+              if (loop) {
+                try { evt.target.seekTo(0, true); evt.target.playVideo(); } catch { }
+              } else if (!hasTriggeredRef.current) {
+                hasTriggeredRef.current = true;
+                onEnded();
+              }
+              } else if (evt.data === 2 || evt.data === -1 || evt.data === 5) {
                 try { evt.target.playVideo(); } catch { }
-              } else if (evt.data === 0) {
-                if (loop) {
-                  try { evt.target.seekTo(0, true); evt.target.playVideo(); } catch { }
-                } else if (!hasTriggeredRef.current) {
-                  hasTriggeredRef.current = true;
-                  onEnded();
-                }
               }
             }
           },
@@ -187,6 +197,7 @@ function YouTubeSlide({
       isMountedRef.current = false;
       if (loadTimer) clearTimeout(loadTimer);
       if (pollInterval) clearInterval(pollInterval);
+      isLoadedRef.current = false;
       setIsLoaded(false);
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch { }
@@ -197,34 +208,36 @@ function YouTubeSlide({
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-black select-none pointer-events-none">
-      {/* High-res poster backdrop */}
-      <Image
-        src={posterUrl}
-        alt="Video poster"
-        fill
-        sizes="(max-width: 768px) 100vw, 50vw"
-        className="object-cover"
-        priority={isActive}
-      />
-
-      {/* Embedded player via youtube-nocookie.com */}
       {isActive && (
         <div
-          className={cn(
-            "absolute pointer-events-none transition-opacity duration-500",
-            isLoaded ? "opacity-100" : "opacity-0"
-          )}
+          className="absolute z-0 pointer-events-none"
           style={{
             top: "50%",
             left: "50%",
-            transform: "translate(-50%, -50%)",
+            transform: "translate(-50%, -50%) scale(1.45)",
             width: "max(100%, calc(220px * 16 / 9))",
             aspectRatio: "16 / 9",
           }}
         >
-          <div ref={containerRef} className="w-full h-full" />
+          <div
+            ref={containerRef}
+            className="w-full h-full pointer-events-none [&_iframe]:pointer-events-none"
+          />
         </div>
       )}
+
+      {/* Hover shield — the cursor can never reach the iframe */}
+      <div className="absolute inset-0 z-10 pointer-events-auto" aria-hidden="true" />
+
+      <img
+        src={`https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`}
+        alt=""
+        aria-hidden="true"
+        className={cn(
+          "absolute inset-0 z-20 w-full h-full object-cover pointer-events-none",
+          isLoaded ? "opacity-0" : "opacity-100",
+        )}
+      />
     </div>
   );
 }
@@ -391,22 +404,65 @@ export default function HeroCard({ hero, hasManageAccess = true, onUpdate, onDel
           )}
 
           {/* 3rd Element: CTA Buttons — solid primary + dark translucent outline */}
-          {(hero.primary_cta_label || hero.secondary_cta_label) && (
-            <div className="flex items-center gap-1.5 sm:gap-2 pt-1 flex-wrap">
-              {hero.primary_cta_label && (
-                <span className="inline-flex items-center gap-1 sm:gap-1.5 h-6 sm:h-7 px-2.5 sm:px-3.5 rounded-md bg-[#00668a] hover:bg-[#004c69] text-white text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest shadow-md cursor-default transition-all">
-                  {hero.primary_cta_label}
-                  <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                </span>
-              )}
-              {hero.secondary_cta_label && (
-                <span className="inline-flex items-center gap-1 sm:gap-1.5 h-6 sm:h-7 px-2.5 sm:px-3.5 rounded-md bg-[#121d24]/90 border border-white/20 text-white text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest backdrop-blur-sm cursor-default transition-all">
-                  {hero.secondary_cta_label}
-                  <ArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                </span>
-              )}
-            </div>
-          )}
+          {(() => {
+            const hasPrimaryCta = !!(hero.primary_cta_label?.trim() || hero.primary_cta_link?.trim());
+            const hasSecondaryCta = !!(hero.secondary_cta_label?.trim() || hero.secondary_cta_link?.trim());
+            if (!hasPrimaryCta && !hasSecondaryCta) return null;
+
+            const primaryCta = resolveCta(hero.primary_cta_link, hero.primary_cta_label);
+            const secondaryCta = resolveCta(hero.secondary_cta_link, hero.secondary_cta_label);
+
+            const PrimaryIcon =
+              primaryCta.kind === "phone"
+                ? Phone
+                : primaryCta.kind === "whatsapp"
+                ? MessageCircle
+                : ExternalLink;
+
+            const SecondaryIcon =
+              secondaryCta.kind === "phone"
+                ? Phone
+                : secondaryCta.kind === "whatsapp"
+                ? MessageCircle
+                : ArrowRight;
+
+            return (
+              <div className="flex items-center gap-1.5 sm:gap-2 pt-1 flex-wrap z-30">
+                {hasPrimaryCta && (
+                  <a
+                    href={primaryCta.href}
+                    target={primaryCta.target}
+                    rel={primaryCta.rel}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (primaryCta.href === "#") e.preventDefault();
+                    }}
+                    className="inline-flex items-center gap-1 sm:gap-1.5 h-6 sm:h-7 px-2.5 sm:px-3.5 rounded-md bg-[#00668a] hover:bg-[#004c69] text-white text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest shadow-md cursor-pointer transition-all hover:scale-[1.03] active:scale-[0.97]"
+                    title={primaryCta.href !== "#" ? primaryCta.href : primaryCta.displayLabel}
+                  >
+                    <span className="truncate max-w-[140px] sm:max-w-[200px]">{primaryCta.displayLabel}</span>
+                    <PrimaryIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
+                  </a>
+                )}
+                {hasSecondaryCta && (
+                  <a
+                    href={secondaryCta.href}
+                    target={secondaryCta.target}
+                    rel={secondaryCta.rel}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (secondaryCta.href === "#") e.preventDefault();
+                    }}
+                    className="inline-flex items-center gap-1 sm:gap-1.5 h-6 sm:h-7 px-2.5 sm:px-3.5 rounded-md bg-[#121d24]/90 hover:bg-white/15 border border-white/20 text-white text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest backdrop-blur-sm cursor-pointer transition-all hover:scale-[1.03] active:scale-[0.97]"
+                    title={secondaryCta.href !== "#" ? secondaryCta.href : secondaryCta.displayLabel}
+                  >
+                    <span className="truncate max-w-[140px] sm:max-w-[200px]">{secondaryCta.displayLabel}</span>
+                    <SecondaryIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
+                  </a>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 

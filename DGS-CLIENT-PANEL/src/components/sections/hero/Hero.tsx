@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore, useRef, useEffect, useCallback } from "react";
-import { ExternalLink, ArrowRight, ChevronDown } from "lucide-react";
+import { Fragment, useMemo, useState, useSyncExternalStore, useRef, useEffect, useCallback } from "react";
+import { ExternalLink, ChevronDown, Phone, MessageCircle } from "lucide-react";
 import { Button } from "../../ui/button";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, EffectFade, Pagination } from "swiper/modules";
@@ -26,6 +26,185 @@ const getYouTubeId = (url: string): string | null => {
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{6,12})/);
   return m ? m[1] : null;
 };
+
+// ─── Smart CTA resolution (phone / WhatsApp / regular link) ───────────────
+const DEFAULT_HIGHLIGHT = "#ff5722";
+const digitsOnly = (v: string) => v.replace(/[^\d+]/g, "");
+
+function isPhone(value?: string | null): boolean {
+  if (!value) return false;
+  const v = value.trim();
+  if (/^tel:/i.test(v)) return true;
+  const cleaned = v.replace(/^(tel|call|phone|mobile)[:\s-]*/i, "").trim();
+  const digits = cleaned.replace(/[^\d]/g, "");
+  if (digits.length >= 6 && digits.length <= 16) {
+    if (/^[+\d\s().-]+$/.test(cleaned)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function extractPhone(value?: string | null): string {
+  if (!value) return "";
+  const v = value.trim().replace(/^tel:/i, "");
+  const cleaned = v.replace(/^(tel|call|phone|mobile)[:\s-]*/i, "").trim();
+  const digits = digitsOnly(cleaned);
+  if (cleaned.startsWith("+")) {
+    return `+${digits.replace(/^\+/, "")}`;
+  }
+  return digits;
+}
+
+function isWhatsApp(value?: string | null): boolean {
+  if (!value) return false;
+  return /whatsapp|wa\.me/i.test(value.trim());
+}
+
+function extractWhatsApp(value?: string | null): string {
+  if (!value) return "";
+  const v = value.trim();
+  const num = v.match(/(?:wa\.me\/|whatsapp\.com\/send\?phone=|whatsapp:\/\/send\?phone=)([\d+]+)/i)?.[1];
+  if (num) return `https://wa.me/${digitsOnly(num).replace(/^\+/, "")}`;
+  if (/^https?:/i.test(v)) return v;
+  return `https://wa.me/${digitsOnly(v).replace(/^\+/, "")}`;
+}
+
+function resolveCta(
+  link?: string | null,
+  label?: string | null
+): { href: string; kind: "phone" | "whatsapp" | "link"; target?: string; rel?: string; displayLabel: string } {
+  const l = (link || "").trim();
+  const lb = (label || "").trim();
+
+  if (!l && !lb) {
+    return { href: "#", kind: "link", displayLabel: "" };
+  }
+
+  const displayLabel = lb || l;
+
+  if (isWhatsApp(l)) {
+    return { href: extractWhatsApp(l), kind: "whatsapp", target: "_blank", rel: "noopener noreferrer", displayLabel };
+  }
+  if (!l && isWhatsApp(lb)) {
+    return { href: extractWhatsApp(lb), kind: "whatsapp", target: "_blank", rel: "noopener noreferrer", displayLabel };
+  }
+
+  if (isPhone(l)) {
+    return { href: `tel:${extractPhone(l)}`, kind: "phone", displayLabel };
+  }
+
+  if ((!l || l === "#") && isPhone(lb)) {
+    return { href: `tel:${extractPhone(lb)}`, kind: "phone", displayLabel };
+  }
+
+  if (l && l !== "#") {
+    if (/^mailto:/i.test(l)) {
+      return { href: l, kind: "link", displayLabel };
+    }
+    if (l.startsWith("#") || l.startsWith("/")) {
+      return { href: l, kind: "link", displayLabel };
+    }
+    if (/^https?:\/\//i.test(l)) {
+      return { href: l, kind: "link", target: "_blank", rel: "noopener noreferrer", displayLabel };
+    }
+    if (/^[\w-]+\.[a-z]{2,}/i.test(l)) {
+      return { href: `https://${l}`, kind: "link", target: "_blank", rel: "noopener noreferrer", displayLabel };
+    }
+    return { href: l, kind: "link", target: "_blank", rel: "noopener noreferrer", displayLabel };
+  }
+
+  if (isPhone(lb)) {
+    return { href: `tel:${extractPhone(lb)}`, kind: "phone", displayLabel };
+  }
+
+  return { href: l || "#", kind: "link", displayLabel };
+}
+
+// ─── Pill badge above headline ("•" splits segments; rest colorized) ──────
+function BadgePill({ text, dark }: { text: string; dark: boolean }) {
+  const parts = text.split("•").map((s) => s.trim()).filter(Boolean);
+  if (!parts.length) return null;
+  return (
+    <span
+      className={`inline-flex flex-wrap items-center gap-2 rounded-full px-4 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-widest ${dark
+        ? "bg-white/10 text-white/90 border border-white/20 backdrop-blur-md"
+        : "bg-[#00668a]/10 text-[#00668a] border border-[#00668a]/20"
+        }`}
+    >
+      {parts.map((p, i) => (
+        <Fragment key={i}>
+          {i > 0 && <span style={{ color: DEFAULT_HIGHLIGHT }}>•</span>}
+          <span style={i > 0 ? { color: DEFAULT_HIGHLIGHT } : undefined}>{p}</span>
+        </Fragment>
+      ))}
+    </span>
+  );
+}
+
+// ─── Headline with optional colorized highlight phrase ────────────────────
+function renderHighlighted(text: string, highlight?: string | null) {
+  const h = (highlight || "").trim();
+  if (!h || !text.includes(h)) return text;
+  const i = text.indexOf(h);
+  return (
+    <>
+      {text.slice(0, i)}
+      <span style={{ color: DEFAULT_HIGHLIGHT }}>{h}</span>
+      {text.slice(i + h.length)}
+    </>
+  );
+}
+
+// ─── CTA button with smart icon/behavior ──────────────────────────────────
+function CtaButton({
+  label,
+  link,
+  variant,
+}: {
+  label: string;
+  link?: string | null;
+  variant: "solid" | "outline";
+}) {
+  const { href, kind, target, rel, displayLabel } = resolveCta(link, label);
+  const Icon = kind === "phone" ? Phone : kind === "whatsapp" ? MessageCircle : ExternalLink;
+  const cls =
+    variant === "solid"
+      ? "h-12 px-7 rounded-lg bg-[#00668a] text-white hover:bg-[#004c69] transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 border-none shadow-xl cursor-pointer"
+      : "h-12 px-7 rounded-lg bg-transparent border border-[#00668a] text-[#00668a] hover:bg-[#00668a]/10 transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 shadow-xl backdrop-blur-md cursor-pointer";
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (!href || href === "#") {
+      e.preventDefault();
+      return;
+    }
+    if (kind === "phone") {
+      window.location.href = href;
+      return;
+    }
+    if (target === "_blank") {
+      e.preventDefault();
+      window.open(href, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (href.startsWith("#")) {
+      const el = document.querySelector(href);
+      if (el) {
+        e.preventDefault();
+        el.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+    }
+    window.location.href = href;
+  };
+
+  return (
+    <Button size="lg" className={cls} onClick={handleClick}>
+      <span>{displayLabel || label}</span>
+      <Icon size={15} />
+    </Button>
+  );
+}
 
 // ─── YouTube SDK Loader ───────────────────────────────────────────────────
 let ytApiPromise: Promise<void> | null = null;
@@ -62,15 +241,11 @@ function YouTubeSlide({
   isActive,
   loop,
   onEnded,
-  headline,
-  slideIndex,
 }: {
   videoId: string;
   isActive: boolean;
   loop: boolean;
   onEnded: () => void;
-  headline: string;
-  slideIndex: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
@@ -79,15 +254,16 @@ function YouTubeSlide({
   const isLoadedRef = useRef(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const posterUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+  if (!isActive && isLoaded) {
+    setIsLoaded(false);
+  }
 
   useEffect(() => {
     isMountedRef.current = true;
 
     if (!isActive) {
-      setIsLoaded(false);
-      isLoadedRef.current = false;
       hasTriggeredRef.current = false;
+      isLoadedRef.current = false;
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch { }
         playerRef.current = null;
@@ -97,7 +273,6 @@ function YouTubeSlide({
 
     hasTriggeredRef.current = false;
     isLoadedRef.current = false;
-    setIsLoaded(false);
     let loadTimer: NodeJS.Timeout | null = null;
     let pollInterval: NodeJS.Timeout | null = null;
 
@@ -124,7 +299,7 @@ function YouTubeSlide({
           iv_load_policy: 3,
           showinfo: 0,
           autohide: 1,
-          ...(loop ? { loop: 1, playlist: videoId } : {}),
+          cc_load_policy: 0,
           origin: typeof window !== "undefined" ? window.location.origin : undefined,
         },
         events: {
@@ -140,11 +315,13 @@ function YouTubeSlide({
             if (!isMountedRef.current) return;
 
             if (evt.data === 1) {
-              try { evt.target.setPlaybackQuality("hd1080"); } catch { }
               if (loadTimer) clearTimeout(loadTimer);
               loadTimer = setTimeout(() => {
-                if (isMountedRef.current) setIsLoaded(true);
-              }, 8000);
+                if (isMountedRef.current) {
+                  isLoadedRef.current = true;
+                  setIsLoaded(true);
+                }
+                }, 8000);
 
               if (pollInterval) clearInterval(pollInterval);
               pollInterval = setInterval(() => {
@@ -153,15 +330,20 @@ function YouTubeSlide({
                   const curr = playerRef.current.getCurrentTime();
                   const dur = playerRef.current.getDuration();
 
+                  // Keep YouTube's transient startup controls covered.
                   if (!isLoadedRef.current && dur > 0 && curr >= 3.5) {
                     isLoadedRef.current = true;
                     setIsLoaded(true);
                   }
 
-                  if (!loop && dur > 0 && curr >= dur - 0.4 && !hasTriggeredRef.current) {
-                    hasTriggeredRef.current = true;
-                    clearInterval(pollInterval!);
-                    onEnded();
+                  if (dur > 0 && curr >= dur - 0.4) {
+                    if (loop) {
+                      playerRef.current.seekTo(0, true);
+                    } else if (!hasTriggeredRef.current) {
+                      hasTriggeredRef.current = true;
+                      clearInterval(pollInterval!);
+                      onEnded();
+                    }
                   }
                 } catch { }
               }, 100);
@@ -170,15 +352,15 @@ function YouTubeSlide({
               isLoadedRef.current = false;
               setIsLoaded(false);
 
-              if (evt.data === 2 || evt.data === -1 || evt.data === 5) {
+              if (evt.data === 0) {
+              if (loop) {
+                try { evt.target.seekTo(0, true); evt.target.playVideo(); } catch { }
+              } else if (!hasTriggeredRef.current) {
+                hasTriggeredRef.current = true;
+                onEnded();
+              }
+              } else if (evt.data === 2 || evt.data === -1 || evt.data === 5) {
                 try { evt.target.playVideo(); } catch { }
-              } else if (evt.data === 0) {
-                if (loop) {
-                  try { evt.target.seekTo(0, true); evt.target.playVideo(); } catch { }
-                } else if (!hasTriggeredRef.current) {
-                  hasTriggeredRef.current = true;
-                  onEnded();
-                }
               }
             }
           },
@@ -203,41 +385,32 @@ function YouTubeSlide({
     <div className="relative w-full h-full overflow-hidden bg-black select-none pointer-events-none">
       {isActive && (
         <div
-          className="absolute pointer-events-none"
+          className="absolute z-0 pointer-events-none"
           style={{
             top: "50%",
             left: "50%",
-            transform: "translate(-50%, -50%)",
+            transform: "translate(-50%, -50%) scale(1.45)",
             width: "max(100vw, calc(100vh * 16 / 9))",
             aspectRatio: "16 / 9",
           }}
         >
-          <div ref={containerRef} className="w-full h-full" />
-        </div>
-      )}
-
-      {isActive && (
-        <div
-          className={`absolute pointer-events-none transition-opacity duration-500 ${isLoaded ? "opacity-0" : "opacity-100"
-            }`}
-          style={{
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: "max(100vw, calc(100vh * 16 / 9))",
-            aspectRatio: "16 / 9",
-          }}
-        >
-          <Image
-            src={posterUrl}
-            alt={`${headline} video poster ${slideIndex + 1}`}
-            fill
-            sizes="100vw"
-            priority={isActive}
-            className="object-cover"
+          <div
+            ref={containerRef}
+            className="w-full h-full pointer-events-none [&_iframe]:pointer-events-none"
           />
         </div>
       )}
+
+      {/* Hover shield — the cursor can never reach the iframe */}
+      <div className="absolute inset-0 z-10 pointer-events-auto" aria-hidden="true" />
+
+      <img
+        src={`https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`}
+        alt=""
+        aria-hidden="true"
+        className={`absolute inset-0 z-20 w-full h-full object-cover pointer-events-none ${isLoaded ? "opacity-0" : "opacity-100"
+          }`}
+      />
     </div>
   );
 }
@@ -325,6 +498,8 @@ export default function Hero({ activeHero }: HeroProps) {
 
   const headline = activeHero?.headline || siteConfig.company_name || "Digital Futures That Drive Impact";
   const subHeadline = activeHero?.sub_headline || "";
+  const badgeText = activeHero?.badge_text || "";
+  const highlightText = activeHero?.highlight_text || "";
   const primaryCtaLabel = activeHero?.primary_cta_label || "Book a Consultation";
   const primaryCtaLink = activeHero?.primary_cta_link || "#";
   const secondaryCtaLabel = activeHero?.secondary_cta_label || "View Projects";
@@ -375,18 +550,9 @@ export default function Hero({ activeHero }: HeroProps) {
 
   const renderPlaceholder = () => {
     if (!hasMedia) return null;
-    if (first.type === "youtube" && first.youtubeId) {
-      return (
-        <Image
-          src={`https://img.youtube.com/vi/${first.youtubeId}/maxresdefault.jpg`}
-          alt={`${headline} video poster`}
-          fill
-          priority
-          fetchPriority="high"
-          sizes="100vw"
-          className="object-cover"
-        />
-      );
+    if (first.type === "youtube") {
+      // No thumbnail — the video player takes over as soon as it mounts.
+      return <div className="absolute inset-0 bg-black" />;
     }
     if (first.type === "image") {
       return (
@@ -457,8 +623,6 @@ export default function Hero({ activeHero }: HeroProps) {
                       isActive={activeIdx === i}
                       loop={mediaCount === 1}
                       onEnded={handleVideoEnded}
-                      headline={headline}
-                      slideIndex={i}
                     />
                   ) : slide.type === "image" ? (
                     <Image
@@ -488,9 +652,12 @@ export default function Hero({ activeHero }: HeroProps) {
         {hasMedia ? (
           /* Dark full-bleed text overlay */
           <div className="max-w-2xl space-y-4 sm:space-y-6 text-left flex flex-col items-start justify-center">
+            {/* 0th Element: Pill Badge (optional) */}
+            {badgeText && <BadgePill text={badgeText} dark />}
+
             {/* 1st Element: Main Headline (Color: #00668a) */}
             <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-[#00668a] leading-[1.08] tracking-tight font-sans">
-              {headline}
+              {renderHighlighted(headline, highlightText)}
             </h1>
 
             {/* 2nd Element: Sub-headline / Intro Description */}
@@ -502,26 +669,12 @@ export default function Hero({ activeHero }: HeroProps) {
 
             {/* 4th Element: CTA Buttons */}
             <div className="flex flex-row items-center gap-3.5 pt-3 flex-wrap">
-              {primaryCtaLabel && (
-                <Button
-                  size="lg"
-                  className="h-12 px-7 rounded-lg bg-[#00668a] text-white hover:bg-[#004c69] transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 border-none shadow-xl cursor-pointer"
-                  onClick={() => (window.location.href = primaryCtaLink)}
-                >
-                  <span>{primaryCtaLabel}</span>
-                  <ExternalLink size={15} />
-                </Button>
+              {(primaryCtaLabel || primaryCtaLink) && (
+                <CtaButton label={primaryCtaLabel || ""} link={primaryCtaLink} variant="solid" />
               )}
 
-              {secondaryCtaLabel && (
-                <Button
-                  size="lg"
-                  className="h-12 px-7 rounded-lg bg-transparent border border-[#00668a] text-[#00668a] hover:bg-[#00668a]/10 transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 shadow-xl backdrop-blur-md cursor-pointer"
-                  onClick={() => (window.location.href = secondaryCtaLink || "#")}
-                >
-                  <span>{secondaryCtaLabel}</span>
-                  <ArrowRight size={15} />
-                </Button>
+              {(secondaryCtaLabel || secondaryCtaLink) && (
+                <CtaButton label={secondaryCtaLabel || ""} link={secondaryCtaLink} variant="outline" />
               )}
             </div>
           </div>
@@ -529,9 +682,12 @@ export default function Hero({ activeHero }: HeroProps) {
           /* Light theme 2-column layout matching exact mockup media_1789970002288.png */
           <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
             <div className="lg:col-span-7 space-y-5 text-left flex flex-col items-start justify-center">
+              {/* 0th Element: Pill Badge (optional) */}
+              {badgeText && <BadgePill text={badgeText} dark={false} />}
+
               {/* 1st Element: Main Headline (Color: #00668a) */}
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#00668a] leading-[1.08] tracking-tight font-sans">
-                {headline}
+                {renderHighlighted(headline, highlightText)}
               </h1>
 
               {/* 2nd Element: Sub-headline / Intro Description */}
@@ -543,26 +699,12 @@ export default function Hero({ activeHero }: HeroProps) {
 
               {/* 4th Element: CTA Buttons */}
               <div className="flex flex-row items-center gap-3.5 pt-2 flex-wrap">
-                {primaryCtaLabel && (
-                  <Button
-                    size="lg"
-                    className="h-12 px-7 rounded-lg bg-[#00668a] hover:bg-[#004c69] text-white transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 border-none shadow-lg cursor-pointer"
-                    onClick={() => (window.location.href = primaryCtaLink)}
-                  >
-                    <span>{primaryCtaLabel}</span>
-                    <ExternalLink size={15} />
-                  </Button>
+                {(primaryCtaLabel || primaryCtaLink) && (
+                  <CtaButton label={primaryCtaLabel || ""} link={primaryCtaLink} variant="solid" />
                 )}
 
-                {secondaryCtaLabel && (
-                  <Button
-                    size="lg"
-                    className="h-12 px-7 rounded-lg bg-transparent border border-[#00668a] text-[#00668a] hover:bg-[#00668a]/5 transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-                    onClick={() => (window.location.href = secondaryCtaLink || "#")}
-                  >
-                    <span>{secondaryCtaLabel}</span>
-                    <ArrowRight size={15} />
-                  </Button>
+                {(secondaryCtaLabel || secondaryCtaLink) && (
+                  <CtaButton label={secondaryCtaLabel || ""} link={secondaryCtaLink} variant="outline" />
                 )}
               </div>
             </div>

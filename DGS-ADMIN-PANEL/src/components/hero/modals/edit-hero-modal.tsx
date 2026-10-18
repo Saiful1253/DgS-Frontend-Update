@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, GripVertical, RefreshCcw, Eye, EyeOff, Youtube, Info, Upload } from "lucide-react";
+import { Plus, Trash2, GripVertical, RefreshCcw, Eye, EyeOff, Youtube, Info, Upload, Phone, MessageCircle, ExternalLink } from "lucide-react";
+import { resolveCta, isPhone } from "@/lib/cta-resolver";
 import {
   Select,
   SelectContent,
@@ -245,15 +246,34 @@ export default function EditHeroModal({ hero, onSave, trigger, disabled = false 
 
   const handleSave = async () => {
     setErrors({});
+
+    let finalPrimaryLabel = primaryCtaLabel.trim();
+    let finalPrimaryLink = primaryCtaLink.trim();
+
+    // Wise normalization: if only one is provided, pair them up
+    if (!finalPrimaryLink && finalPrimaryLabel) {
+      finalPrimaryLink = finalPrimaryLabel;
+    } else if (!finalPrimaryLabel && finalPrimaryLink) {
+      finalPrimaryLabel = finalPrimaryLink;
+    }
+
+    let finalSecondaryLabel = secondaryCtaLabel?.trim() || "";
+    let finalSecondaryLink = secondaryCtaLink?.trim() || "";
+    if (!finalSecondaryLink && finalSecondaryLabel && isPhone(finalSecondaryLabel)) {
+      finalSecondaryLink = finalSecondaryLabel;
+    } else if (!finalSecondaryLabel && finalSecondaryLink) {
+      finalSecondaryLabel = finalSecondaryLink;
+    }
+
     const payload = {
       headline,
       sub_headline: subHeadline,
       badge_text: badgeText,
       highlight_text: highlightText,
-      primary_cta_label: primaryCtaLabel,
-      primary_cta_link: primaryCtaLink,
-      secondary_cta_label: secondaryCtaLabel,
-      secondary_cta_link: secondaryCtaLink,
+      primary_cta_label: finalPrimaryLabel,
+      primary_cta_link: finalPrimaryLink,
+      secondary_cta_label: finalSecondaryLabel,
+      secondary_cta_link: finalSecondaryLink,
       status,
     };
     const parsed = heroSectionSchema.safeParse(payload);
@@ -411,26 +431,79 @@ export default function EditHeroModal({ hero, onSave, trigger, disabled = false 
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Call-to-Action (CTA) Buttons</h4>
               <span className="text-[10px] text-slate-400 font-medium">Smart detection: Phone number, WhatsApp, or Page URL</span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold">Primary CTA Label * :</label>
-                <Input value={primaryCtaLabel ?? ""} onChange={(e) => setPrimaryCtaLabel(e.target.value)} className={errors.primary_cta_label ? "border-red-500" : ""} />
-                {errors.primary_cta_label && <p className="text-[10px] font-bold text-red-500">{errors.primary_cta_label}</p>}
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold">Primary CTA Link or Phone / WhatsApp * :</label>
-                <Input value={primaryCtaLink ?? ""} onChange={(e) => setPrimaryCtaLink(e.target.value)} className={errors.primary_cta_link ? "border-red-500" : ""} />
-                {errors.primary_cta_link && <p className="text-[10px] font-bold text-red-500">{errors.primary_cta_link}</p>}
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold">Secondary CTA Label (Optional) :</label>
-                <Input value={secondaryCtaLabel ?? ""} onChange={(e) => setSecondaryCtaLabel(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold">Secondary CTA Link or Phone / WhatsApp (Optional) :</label>
-                <Input value={secondaryCtaLink ?? ""} onChange={(e) => setSecondaryCtaLink(e.target.value)} />
-              </div>
-            </div>
+            {(() => {
+              const pResolved = resolveCta(primaryCtaLink, primaryCtaLabel);
+              const sResolved = resolveCta(secondaryCtaLink, secondaryCtaLabel);
+              const hasP = !!(primaryCtaLabel?.trim() || primaryCtaLink?.trim());
+              const hasS = !!(secondaryCtaLabel?.trim() || secondaryCtaLink?.trim());
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold">Primary CTA Label / Button Name * :</label>
+                      {hasP && (
+                        <span className={cn(
+                          "text-[9px] px-1.5 py-0.5 rounded font-bold flex items-center gap-1",
+                          pResolved.kind === "phone" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                          pResolved.kind === "whatsapp" ? "bg-green-50 text-green-700 border border-green-200" :
+                          "bg-sky-50 text-sky-700 border border-sky-200"
+                        )}>
+                          {pResolved.kind === "phone" ? <Phone size={9} /> : pResolved.kind === "whatsapp" ? <MessageCircle size={9} /> : <ExternalLink size={9} />}
+                          {pResolved.kind === "phone" ? `Call (${pResolved.href})` : pResolved.kind === "whatsapp" ? "WhatsApp" : "Web Link"}
+                        </span>
+                      )}
+                    </div>
+                    <Input
+                      value={primaryCtaLabel ?? ""}
+                      onChange={(e) => setPrimaryCtaLabel(e.target.value)}
+                      placeholder="e.g. Call Us Now or 01778277178"
+                      className={errors.primary_cta_label ? "border-red-500" : ""}
+                    />
+                    {errors.primary_cta_label && <p className="text-[10px] font-bold text-red-500">{errors.primary_cta_label}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold">Primary CTA Link or Phone / WhatsApp * :</label>
+                    <Input
+                      value={primaryCtaLink ?? ""}
+                      onChange={(e) => setPrimaryCtaLink(e.target.value)}
+                      placeholder="e.g. 01778277178, /services, or wa.me/..."
+                      className={errors.primary_cta_link ? "border-red-500" : ""}
+                    />
+                    {errors.primary_cta_link && <p className="text-[10px] font-bold text-red-500">{errors.primary_cta_link}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold">Secondary CTA Label / Button Name (Optional) :</label>
+                      {hasS && (
+                        <span className={cn(
+                          "text-[9px] px-1.5 py-0.5 rounded font-bold flex items-center gap-1",
+                          sResolved.kind === "phone" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                          sResolved.kind === "whatsapp" ? "bg-green-50 text-green-700 border border-green-200" :
+                          "bg-sky-50 text-sky-700 border border-sky-200"
+                        )}>
+                          {sResolved.kind === "phone" ? <Phone size={9} /> : sResolved.kind === "whatsapp" ? <MessageCircle size={9} /> : <ExternalLink size={9} />}
+                          {sResolved.kind === "phone" ? `Call (${sResolved.href})` : sResolved.kind === "whatsapp" ? "WhatsApp" : "Web Link"}
+                        </span>
+                      )}
+                    </div>
+                    <Input
+                      value={secondaryCtaLabel ?? ""}
+                      onChange={(e) => setSecondaryCtaLabel(e.target.value)}
+                      placeholder="e.g. 01778-277178 or Explore"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold">Secondary CTA Link or Phone / WhatsApp (Optional) :</label>
+                    <Input
+                      value={secondaryCtaLink ?? ""}
+                      onChange={(e) => setSecondaryCtaLink(e.target.value)}
+                      placeholder="e.g. tel:01778277178, #about, or wa.me/..."
+                    />
+                  </div>
+                </div>
+              );
+            })()}
             <p className="text-[10px] text-slate-500 italic">
               * If you enter a phone number (e.g. 01778-277178), it will show a call icon and trigger a direct call. If you enter a WhatsApp link or number, it will open WhatsApp chat. Otherwise, it functions as a regular website button link.
             </p>

@@ -95,7 +95,14 @@ export default function HeroManager({
       .filter(Boolean);
     return heroes.filter((h) => {
       const matchesStatus = appliedFilters.status === "all" || h.status === appliedFilters.status;
-      const haystack = [h.headline, h.sub_headline, h.primary_cta_label]
+      const haystack = [
+        h.headline,
+        h.sub_headline,
+        h.primary_cta_label,
+        h.primary_cta_link,
+        h.secondary_cta_label,
+        h.secondary_cta_link,
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();

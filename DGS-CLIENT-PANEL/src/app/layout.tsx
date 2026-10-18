@@ -86,6 +86,12 @@ export default async function RootLayout({
           name="google-site-verification"
           content="t8Oyf20bPl5W-UsQvEsrEaxwM66bah4PHMnx8YyoYPM"
         />
+        {/* Preconnect so the hero YouTube background starts playing ASAP. */}
+        <link rel="preconnect" href="https://www.youtube.com" />
+        <link rel="preconnect" href="https://www.youtube-nocookie.com" />
+        <link rel="preconnect" href="https://i.ytimg.com" />
+        <link rel="dns-prefetch" href="https://www.youtube.com" />
+        <link rel="dns-prefetch" href="https://www.youtube-nocookie.com" />
       </head>
       <body className={`${hankenGrotesk.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
         <SiteConfigProvider config={siteConfig}>
