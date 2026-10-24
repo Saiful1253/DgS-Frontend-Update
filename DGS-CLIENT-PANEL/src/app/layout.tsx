@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
-import { Hanken_Grotesk, Geist_Mono } from "next/font/google";
+import {
+  Hanken_Grotesk,
+  Geist_Mono,
+  Space_Grotesk,
+  Plus_Jakarta_Sans,
+  Inter,
+  JetBrains_Mono,
+} from "next/font/google";
 import "./globals.css";
 import SplashScreen from "@/components/shared/SplashScreen";
 import AutoTranslate from "@/components/shared/AutoTranslate";
@@ -23,6 +30,36 @@ const hankenGrotesk = Hanken_Grotesk({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Second brand face. Engineering Services (Figma 8:142) sets every micro-label
+// — badges, spec codes, CTAs, tags — in Space Grotesk while headings/body stay
+// Hanken Grotesk. Static (not variable) so the 500/600/700 cuts match Figma.
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+// Figma 8:400 (Why Choose Digital Gas Service) sets headings/metrics in
+// Plus Jakarta Sans, body copy in Inter and the eyebrow label in JetBrains
+// Mono. Static cuts so 600/700/800 match the design exactly.
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+});
+
+const inter = Inter({
+  variable: "--font-inter-body",
+  subsets: ["latin"],
+  weight: ["400"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  weight: ["500"],
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -93,7 +130,14 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://www.youtube.com" />
         <link rel="dns-prefetch" href="https://www.youtube-nocookie.com" />
       </head>
-      <body className={`${hankenGrotesk.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
+      {/* font-sans is required, not decorative: `@theme inline` inlines
+          --font-sans instead of emitting it, so Tailwind's preflight
+          `var(--default-font-family)` resolves to nothing and the whole site
+          silently fell back to the system UI stack. */}
+      <body
+        className={`${hankenGrotesk.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${plusJakartaSans.variable} ${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
+        suppressHydrationWarning
+      >
         <SiteConfigProvider config={siteConfig}>
           <LanguageProvider>
             <AutoTranslate />

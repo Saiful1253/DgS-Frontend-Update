@@ -84,7 +84,7 @@ export class SettingsService {
       settings = this.companyRepo.create({
         id: 1,
         legal_company_name: 'Milanova Technologies S.R.L.',
-        brand_name: 'Milanova Technologies',
+        brand_name: 'Digital Gas Service',
         primary_headquarters_address: 'Via Rome 45, Milan, Italy',
         official_emails: { general: 'info@milanovatech.com', sales: 'sales@milanovatech.com' },
         calendly_url: 'https://calendly.com/milanova-tech/30min',

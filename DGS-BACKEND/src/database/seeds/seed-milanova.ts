@@ -44,7 +44,7 @@ async function seedMilanoVAData() {
     await companyRepo.save({
       id: 1,
       legal_company_name: 'Milanova Technologies S.R.L.',
-      brand_name: 'Milanova Technologies',
+      brand_name: 'Digital Gas Service',
       mission_purpose: 'To build simple, scalable, and secure digital products that empower businesses to operate efficiently and grow without technical friction.',
       incorporation_details: 'Italy Registered, REA MI-2049182',
       eu_standards_badge_info: 'GDPR Compliant · ISO 27001 Certified Architecture',

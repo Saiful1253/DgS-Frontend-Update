@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import { getSiteConfig } from "@/services/site-config/site-config.service";
 import Hero from "@/components/sections/hero/Hero";
 import BlogsSection from "@/components/sections/blogs/BlogsSection";
+import EngineeringServices from "@/components/sections/services/EngineeringServices";
+import WhyChooseSection from "@/components/sections/why-choose/WhyChooseSection";
 import type { HeroSection } from "@/types/cms/cms";
 import type { SiteConfig } from "@/types/settings";
 
@@ -74,6 +76,9 @@ export default async function Page() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Hero activeHero={activeHero} />
+      <EngineeringServices />
+      {/* Figma 8:400 — SECTION 3, sits directly above the blog block. */}
+      <WhyChooseSection />
       <Suspense fallback={<div className="h-40 animate-pulse bg-slate-100" />}>
         <BlogsSection
           blogData={blogs}
