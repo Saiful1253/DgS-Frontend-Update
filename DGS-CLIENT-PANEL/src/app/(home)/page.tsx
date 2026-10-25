@@ -7,6 +7,7 @@ import Hero from "@/components/sections/hero/Hero";
 import BlogsSection from "@/components/sections/blogs/BlogsSection";
 import EngineeringServices from "@/components/sections/services/EngineeringServices";
 import WhyChooseSection from "@/components/sections/why-choose/WhyChooseSection";
+import LpgReticulationSection from "@/components/sections/reticulation-comparison/LpgReticulationSection";
 import type { HeroSection } from "@/types/cms/cms";
 import type { SiteConfig } from "@/types/settings";
 
@@ -77,8 +78,10 @@ export default async function Page() {
       />
       <Hero activeHero={activeHero} />
       <EngineeringServices />
-      {/* Figma 8:400 — SECTION 3, sits directly above the blog block. */}
+      {/* Figma 8:400 — SECTION 3: Why Choose */}
       <WhyChooseSection />
+      {/* Figma 8:468 — SECTION 4: Why Choose Our LPG Reticulation System? */}
+      <LpgReticulationSection />
       <Suspense fallback={<div className="h-40 animate-pulse bg-slate-100" />}>
         <BlogsSection
           blogData={blogs}
