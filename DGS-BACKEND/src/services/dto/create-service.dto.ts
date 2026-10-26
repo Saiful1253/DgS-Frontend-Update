@@ -1,5 +1,30 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsBoolean, Min, MaxLength, Matches } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsInt,
+  IsBoolean,
+  IsArray,
+  Min,
+  MaxLength,
+  Matches,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+
+export class ServiceFeatureDto {
+  @IsString()
+  @IsNotEmpty()
+  title: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  icon?: string;
+}
 
 export class CreateServiceDto {
   @IsOptional()
@@ -36,10 +61,64 @@ export class CreateServiceDto {
   icon_url?: string;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  display_order?: number;
+  @IsString()
+  @MaxLength(50)
+  spec_code?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  badge_label?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  badge_status?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  sub_title?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  category_tag?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  tier_label?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  image_url?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_flagship?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ServiceFeatureDto)
+  features?: ServiceFeatureDto[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  compliance_codes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  cta_label?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  cta_url?: string;
 
   @IsOptional()
   @IsBoolean()

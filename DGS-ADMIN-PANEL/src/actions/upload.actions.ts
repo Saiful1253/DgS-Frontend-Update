@@ -17,26 +17,28 @@ import { parseApiResponse } from "@/lib/api-error";
  * the multipart body, and the body is transport.
  */
 
-/** Pillar icons: pillars are a distinct resource, so they get their own folder. */
-const PILLAR_FOLDER = "service-pillars";
+/** Category icons: categories get their own upload folder. */
+const CATEGORY_FOLDER = "service-categories";
 
-export async function uploadServicePillarIconAction(
+export async function uploadServiceCategoryIconAction(
   formData: FormData,
-  folder: string = PILLAR_FOLDER
+  folder: string = CATEGORY_FOLDER
 ): Promise<ActionResult> {
   try {
     if (!formData.get("file")) return fail("No file selected");
 
     formData.append("folder", folder);
     const res = await serverFetch.post("/upload/image", { body: formData as any });
-    const result = fromServiceResponse(await parseApiResponse(res), "Failed to upload pillar icon");
+    const result = fromServiceResponse(await parseApiResponse(res), "Failed to upload category icon");
     if (!result.success) return result;
 
-    return { ...result, message: result.message || "pillar icon uploaded successfully" };
+    return { ...result, message: result.message || "Category icon uploaded successfully" };
   } catch (e: unknown) {
-    return fail(e instanceof Error ? e.message : "Failed to upload pillar icon");
+    return fail(e instanceof Error ? e.message : "Failed to upload category icon");
   }
 }
+
+export const uploadServicePillarIconAction = uploadServiceCategoryIconAction;
 
 export async function uploadHeroIconAction(
   formData: FormData,
@@ -51,5 +53,21 @@ export async function uploadHeroIconAction(
     return { ...result, message: result.message || "icon uploaded successfully" };
   } catch (e: unknown) {
     return fail(e instanceof Error ? e.message : "Failed to upload icon");
+  }
+}
+
+export async function uploadCertificateIconAction(
+  formData: FormData,
+  folder: string = "certificate-icons"
+): Promise<ActionResult> {
+  try {
+    if (!formData.get("file")) return fail("No file selected");
+    if (!formData.has("folder")) formData.append("folder", folder);
+    const res = await serverFetch.post("/upload/image", { body: formData as any });
+    const result = fromServiceResponse(await parseApiResponse(res), "Failed to upload certificate icon");
+    if (!result.success) return result;
+    return { ...result, message: result.message || "certificate icon uploaded successfully" };
+  } catch (e: unknown) {
+    return fail(e instanceof Error ? e.message : "Failed to upload certificate icon");
   }
 }

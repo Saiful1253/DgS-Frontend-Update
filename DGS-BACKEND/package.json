@@ -24,6 +24,9 @@
     "migration:show": "typeorm-ts-node-commonjs migration:show     -d src/database/data-source.ts",
     "seed:milanova": "ts-node src/database/seeds/seed-milanova.ts",
     "seed:admin": "ts-node src/database/seeds/seed-admin.ts",
+    "seed:certificates": "ts-node src/database/seeds/seed-certificates.ts",
+    "seed:dgs-services": "ts-node src/database/seeds/seed-dgs-services.ts",
+    "seed:dgs-config": "ts-node src/database/seeds/seed-dgs-site-config.ts",
     "seed:admin:prod": "node dist/database/seeds/seed-admin.js"
   },
   "dependencies": {

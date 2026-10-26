@@ -7,14 +7,13 @@ import {
   PanelsTopLeft,
   FolderKanban,
   Layers,
-  Package,
-  Code2,
   FileText,
   MessageSquare,
   Briefcase,
   Mail,
   BarChart3,
   Users,
+  Award,
   Settings,
   
   LogOut,
@@ -79,24 +78,17 @@ const adminCmsModules: MenuItem[] = [
     
   },
   {
-    title: "Product",
-    url: "/products",
-    href: "/products",
-    icon: Package,
-    
-  },
-  {
-    title: "Technologies",
-    url: "/technologies",
-    href: "/technologies",
-    icon: Code2,
-    
-  },
-  {
     title: "Blogs / Articles",
     url: "/blogs",
     href: "/blogs",
     icon: FileText,
+    
+  },
+  {
+    title: "Certificates",
+    url: "/certificates",
+    href: "/certificates",
+    icon: Award,
     
   },
   {

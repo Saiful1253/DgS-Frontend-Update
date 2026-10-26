@@ -2,6 +2,22 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { PortfolioChallenge } from './portfolio-challenge.entity';
 import { PortfolioPricingTier } from './portfolio-pricing-tier.entity';
 
+export enum PortfolioMediaType {
+  IMAGE = 'image',
+  YOUTUBE = 'youtube',
+}
+
+export enum PortfolioProjectStatus {
+  COMPLETED = 'completed',
+  ONGOING = 'ongoing',
+}
+
+export enum PortfolioProjectType {
+  RESIDENTIAL = 'residential',
+  INDUSTRIAL = 'industrial',
+  COMMERCIAL_RESTAURANT = 'commercial_restaurant',
+}
+
 @Entity('portfolios')
 export class Portfolio {
   @PrimaryGeneratedColumn()
@@ -36,6 +52,46 @@ export class Portfolio {
 
   @Column({ type: 'boolean', default: false })
   is_featured: boolean;
+
+  // Media
+  @Column({
+    type: 'enum',
+    enum: PortfolioMediaType,
+    default: PortfolioMediaType.IMAGE,
+  })
+  media_type: PortfolioMediaType;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  media_url: string;
+
+  // Project Meta
+  @Column({
+    type: 'enum',
+    enum: PortfolioProjectStatus,
+    default: PortfolioProjectStatus.COMPLETED,
+  })
+  project_status: PortfolioProjectStatus;
+
+  @Column({
+    type: 'enum',
+    enum: PortfolioProjectType,
+    default: PortfolioProjectType.RESIDENTIAL,
+  })
+  project_type: PortfolioProjectType;
+
+  // Location
+  @Column({ type: 'text', nullable: true })
+  address: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  latitude: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  longitude: number | null;
+
+  // Description
+  @Column({ type: 'text', nullable: true })
+  description: string;
 
   // Primary Highlight
   @Column({ type: 'varchar', length: 500, nullable: true })

@@ -46,12 +46,22 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 
+const isSupportedImage = (file: File): boolean => {
+  if (file.type && ALLOWED_IMAGE_TYPES.includes(file.type)) return true;
+  const name = file.name.toLowerCase();
+  return ALLOWED_IMAGE_EXTS.some((ext) => name.endsWith(ext));
+};
+
+/*
 const getYouTubeId = (url: string): string | null => {
   if (!url) return null;
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{6,12})/);
   return m ? m[1] : null;
 };
+*/
 
 interface CreateHeroModalProps {
   onAddHero: (
@@ -83,8 +93,8 @@ export default function CreateHeroModal({ onAddHero, disabled = false }: CreateH
 
   // Media Queue (images + youtube videos in one ordered list)
   const [mediaQueue, setMediaQueue] = useState<any[]>([]);
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [youtubeError, setYoutubeError] = useState("");
+  // const [youtubeUrl, setYoutubeUrl] = useState("");
+  // const [youtubeError, setYoutubeError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
@@ -104,8 +114,8 @@ export default function CreateHeroModal({ onAddHero, disabled = false }: CreateH
       setSecondaryCtaLink("");
       setStatus("draft");
       setMediaQueue([]);
-      setYoutubeUrl("");
-      setYoutubeError("");
+      // setYoutubeUrl("");
+      // setYoutubeError("");
       setErrors({});
     }
     setOpen(newOpen);
@@ -126,11 +136,15 @@ export default function CreateHeroModal({ onAddHero, disabled = false }: CreateH
 
     const validFiles: File[] = [];
     Array.from(files).forEach((file) => {
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error(`File ${file.name} exceeds 5MB limit.`);
-      } else {
-        validFiles.push(file);
+      if (!isSupportedImage(file)) {
+        toast.error(`Please Choose an Image file`);
+        return;
       }
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`File size exceeds 5MB limit.`);
+        return;
+      }
+      validFiles.push(file);
     });
 
     if (validFiles.length === 0) return;
@@ -146,6 +160,7 @@ export default function CreateHeroModal({ onAddHero, disabled = false }: CreateH
     setMediaQueue((prev) => [...prev, ...newAdded]);
   };
 
+  /*
   const handleAddYouTube = () => {
     const url = youtubeUrl.trim();
     if (!url) {
@@ -172,6 +187,7 @@ export default function CreateHeroModal({ onAddHero, disabled = false }: CreateH
     ]);
     setYoutubeUrl("");
   };
+  */
 
   const handleToggleMediaStatus = (id: string) => {
     setMediaQueue(prev => prev.map(item =>
@@ -350,8 +366,8 @@ export default function CreateHeroModal({ onAddHero, disabled = false }: CreateH
                             <span className={cn(
                               "text-[9px] px-1.5 py-0.5 rounded font-bold flex items-center gap-1",
                               pResolved.kind === "phone" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                              pResolved.kind === "whatsapp" ? "bg-green-50 text-green-700 border border-green-200" :
-                              "bg-sky-50 text-sky-700 border border-sky-200"
+                                pResolved.kind === "whatsapp" ? "bg-green-50 text-green-700 border border-green-200" :
+                                  "bg-sky-50 text-sky-700 border border-sky-200"
                             )}>
                               {pResolved.kind === "phone" ? <Phone size={9} /> : pResolved.kind === "whatsapp" ? <MessageCircle size={9} /> : <ExternalLink size={9} />}
                               {pResolved.kind === "phone" ? `Call (${pResolved.href})` : pResolved.kind === "whatsapp" ? "WhatsApp" : "Web Link"}
@@ -386,8 +402,8 @@ export default function CreateHeroModal({ onAddHero, disabled = false }: CreateH
                             <span className={cn(
                               "text-[9px] px-1.5 py-0.5 rounded font-bold flex items-center gap-1",
                               sResolved.kind === "phone" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                              sResolved.kind === "whatsapp" ? "bg-green-50 text-green-700 border border-green-200" :
-                              "bg-sky-50 text-sky-700 border border-sky-200"
+                                sResolved.kind === "whatsapp" ? "bg-green-50 text-green-700 border border-green-200" :
+                                  "bg-sky-50 text-sky-700 border border-sky-200"
                             )}>
                               {sResolved.kind === "phone" ? <Phone size={9} /> : sResolved.kind === "whatsapp" ? <MessageCircle size={9} /> : <ExternalLink size={9} />}
                               {sResolved.kind === "phone" ? `Call (${sResolved.href})` : sResolved.kind === "whatsapp" ? "WhatsApp" : "Web Link"}
@@ -439,47 +455,59 @@ export default function CreateHeroModal({ onAddHero, disabled = false }: CreateH
               <span className="text-xs text-slate-500 font-medium">{mediaQueue.length} items</span>
             </div>
 
-            <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-white hover:bg-slate-50 border-slate-300 text-xs font-bold gap-1.5"
-                >
-                  <Plus className="w-3.5 h-3.5 text-primary" />
-                  Upload Images
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  onChange={(e) => handleAddImagesQueue(e.target.files)}
-                />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "p-4 rounded-xl border-2 border-dashed bg-slate-50/50 hover:bg-slate-50 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-2",
+                errors.images
+                  ? "border-red-400 bg-red-50/20 hover:border-red-500"
+                  : "border-slate-200 hover:border-[#00668a]/50"
+              )}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => {
+                  handleAddImagesQueue(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                <Upload className="h-5 w-5 text-[#00668a]" />
               </div>
-
-              <div className="flex gap-2">
-                <Input
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                  placeholder="Paste YouTube Link (e.g. https://www.youtube.com/watch?v=...)"
-                  className="h-9 text-xs bg-white border-slate-300"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleAddYouTube}
-                  className="h-9 bg-red-600 hover:bg-red-700 text-white text-xs font-bold gap-1 px-3"
-                >
-                  <Youtube className="w-4 h-4" />
-                  Add Video
-                </Button>
+              <div>
+                <p className="text-xs font-semibold text-slate-700">
+                  Click to upload an image
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  High-resolution photo of gas pipeline, manifold, or industrial plant
+                </p>
               </div>
-              {youtubeError && <p className="text-xs text-red-500 font-medium whitespace-pre-line">{youtubeError}</p>}
             </div>
+
+            {/*
+            <div className="flex gap-2">
+              <Input
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                placeholder="Paste YouTube Link (e.g. https://www.youtube.com/watch?v=...)"
+                className="h-9 text-xs bg-white border-slate-300"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleAddYouTube}
+                className="h-9 bg-red-600 hover:bg-red-700 text-white text-xs font-bold gap-1 px-3"
+              >
+                <Youtube className="w-4 h-4" />
+                Add Video
+              </Button>
+            </div>
+            {youtubeError && <p className="text-xs text-red-500 font-medium whitespace-pre-line">{youtubeError}</p>}
+            */}
 
             {/* Drag and drop sortable list */}
             {mediaQueue.length > 0 && (

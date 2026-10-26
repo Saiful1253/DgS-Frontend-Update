@@ -15,6 +15,9 @@ import {
   AlertTriangle,
   ChevronDown,
   FolderKanban,
+  Video,
+  MapPin,
+  Youtube,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -48,6 +51,12 @@ import {
 import { listBlogTags, createBlogTag } from "@/services/blog/blog.service";
 import OptionPicker, { PickerOption } from "@/components/blog/option-picker";
 import PortfolioCategoryModal from "../category/portfolio-category-modal";
+import {
+  BANGLADESH_DISTRICTS,
+  COMMON_DHAKA_AREAS,
+  PROJECT_TYPES,
+  PROJECT_STATUSES,
+} from "@/lib/bangladesh-locations";
 
 interface FormSnapshot {
   project_name: string;
@@ -59,6 +68,16 @@ interface FormSnapshot {
   live_url: string;
   app_store_url: string;
   is_featured: boolean;
+  media_type: "image" | "youtube";
+  media_url: string;
+  project_status: "completed" | "ongoing";
+  project_type: "residential" | "industrial" | "commercial_restaurant";
+  district: string;
+  area: string;
+  address: string;
+  latitude: string;
+  longitude: string;
+  description: string;
   primary_challenge: string;
   primary_solution: string;
   challenges: Array<{
@@ -103,6 +122,24 @@ export default function PortfolioFormModal({
   const [liveUrl, setLiveUrl] = useState("");
   const [appStoreUrl, setAppStoreUrl] = useState("");
   const [isFeatured, setIsFeatured] = useState<boolean>(false);
+
+  // New Portfolio Engine Form State
+  const [mediaType, setMediaType] = useState<"image" | "youtube">("image");
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [projectStatus, setProjectStatus] = useState<"completed" | "ongoing">("completed");
+  const [projectType, setProjectType] = useState<
+    "residential" | "industrial" | "commercial_restaurant"
+  >("residential");
+  const [district, setDistrict] = useState("Dhaka");
+  const [area, setArea] = useState("");
+  const [address, setAddress] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [description, setDescription] = useState("");
+  const [allAreas, setAllAreas] = useState<string[]>(COMMON_DHAKA_AREAS);
+  const [isAddingAreaInline, setIsAddingAreaInline] = useState(false);
+  const [newInlineArea, setNewInlineArea] = useState("");
+
   const [primaryChallenge, setPrimaryChallenge] = useState("");
   const [primarySolution, setPrimarySolution] = useState("");
   const [challenges, setChallenges] = useState<
@@ -201,6 +238,37 @@ export default function PortfolioFormModal({
       setLiveUrl(project.live_url || "");
       setAppStoreUrl(project.app_store_url || "");
       setIsFeatured(Boolean(project.is_featured));
+
+      // New Portfolio Engine values
+      setMediaType(project.media_type || "image");
+      setMediaUrl(project.media_url || "");
+      setProjectStatus(project.project_status || "completed");
+      setProjectType(project.project_type || "residential");
+      
+      const rawAddr = project.address || "";
+      setAddress(rawAddr);
+      let matchedDist = "Dhaka";
+      for (const d of BANGLADESH_DISTRICTS) {
+        if (rawAddr.toLowerCase().includes(d.toLowerCase())) {
+          matchedDist = d;
+          break;
+        }
+      }
+      setDistrict(matchedDist);
+
+      let matchedArea = "";
+      for (const a of COMMON_DHAKA_AREAS) {
+        if (rawAddr.toLowerCase().includes(a.toLowerCase())) {
+          matchedArea = a;
+          break;
+        }
+      }
+      setArea(matchedArea);
+
+      setLatitude(project.latitude !== undefined && project.latitude !== null ? String(project.latitude) : "");
+      setLongitude(project.longitude !== undefined && project.longitude !== null ? String(project.longitude) : "");
+      setDescription(project.description || "");
+
       setPrimaryChallenge(project.primary_challenge || "");
       setPrimarySolution(project.primary_solution || "");
       setChallenges(
@@ -226,6 +294,16 @@ export default function PortfolioFormModal({
         live_url: project.live_url || "",
         app_store_url: project.app_store_url || "",
         is_featured: Boolean(project.is_featured),
+        media_type: project.media_type || "image",
+        media_url: project.media_url || "",
+        project_status: project.project_status || "completed",
+        project_type: project.project_type || "residential",
+        district: matchedDist,
+        area: matchedArea,
+        address: rawAddr,
+        latitude: project.latitude !== undefined && project.latitude !== null ? String(project.latitude) : "",
+        longitude: project.longitude !== undefined && project.longitude !== null ? String(project.longitude) : "",
+        description: project.description || "",
         primary_challenge: project.primary_challenge || "",
         primary_solution: project.primary_solution || "",
         challenges: (project.challenges || []).map((c) => ({
@@ -248,6 +326,16 @@ export default function PortfolioFormModal({
       setLiveUrl("");
       setAppStoreUrl("");
       setIsFeatured(false);
+      setMediaType("image");
+      setMediaUrl("");
+      setProjectStatus("completed");
+      setProjectType("residential");
+      setDistrict("Dhaka");
+      setArea("");
+      setAddress("");
+      setLatitude("");
+      setLongitude("");
+      setDescription("");
       setPrimaryChallenge("");
       setPrimarySolution("");
       setChallenges([
@@ -276,6 +364,9 @@ export default function PortfolioFormModal({
           tags.length > 0 ||
           liveUrl.trim() ||
           appStoreUrl.trim() ||
+          mediaUrl.trim() ||
+          description.trim() ||
+          address.trim() ||
           primaryChallenge.trim() ||
           primarySolution.trim()
       );
@@ -297,6 +388,14 @@ export default function PortfolioFormModal({
       liveUrl.trim() !== originalSnapshot.live_url.trim() ||
       appStoreUrl.trim() !== originalSnapshot.app_store_url.trim() ||
       isFeatured !== originalSnapshot.is_featured ||
+      mediaType !== originalSnapshot.media_type ||
+      mediaUrl.trim() !== originalSnapshot.media_url.trim() ||
+      projectStatus !== originalSnapshot.project_status ||
+      projectType !== originalSnapshot.project_type ||
+      address.trim() !== originalSnapshot.address.trim() ||
+      latitude.trim() !== originalSnapshot.latitude.trim() ||
+      longitude.trim() !== originalSnapshot.longitude.trim() ||
+      description.trim() !== originalSnapshot.description.trim() ||
       primaryChallenge.trim() !== originalSnapshot.primary_challenge.trim() ||
       primarySolution.trim() !== originalSnapshot.primary_solution.trim() ||
       JSON.stringify(currentChallenges) !== JSON.stringify(originalSnapshot.challenges)
@@ -459,6 +558,8 @@ export default function PortfolioFormModal({
             .replace(/^-+|-+$/g, "")
         : "");
 
+    const finalAddress = address.trim() || (area && district ? `${area}, ${district}` : district || "");
+
     const tentativePayload = {
       id: editingId || undefined,
       project_name: projectName.trim(),
@@ -470,6 +571,14 @@ export default function PortfolioFormModal({
       live_url: liveUrl.trim(),
       app_store_url: appStoreUrl.trim(),
       is_featured: isFeatured,
+      media_type: mediaType,
+      media_url: mediaType === "youtube" ? mediaUrl.trim() : "",
+      project_status: projectStatus,
+      project_type: projectType,
+      address: finalAddress,
+      latitude: latitude ? Number(latitude) : null,
+      longitude: longitude ? Number(longitude) : null,
+      description: description.trim(),
       primary_challenge: primaryChallenge.trim(),
       primary_solution: primarySolution.trim(),
       challenges: challenges.map((c, i) => ({
@@ -556,6 +665,14 @@ export default function PortfolioFormModal({
         live_url: liveUrl.trim(),
         app_store_url: appStoreUrl.trim(),
         is_featured: isFeatured,
+        media_type: mediaType,
+        media_url: mediaType === "youtube" ? mediaUrl.trim() : undefined,
+        project_status: projectStatus,
+        project_type: projectType,
+        address: finalAddress || undefined,
+        latitude: latitude ? Number(latitude) : null,
+        longitude: longitude ? Number(longitude) : null,
+        description: description.trim() || undefined,
         primary_challenge: primaryChallenge.trim(),
         primary_solution: primarySolution.trim(),
         challenges: processedChallenges,
@@ -647,6 +764,75 @@ export default function PortfolioFormModal({
                 </span>
               </div>
             )}
+
+            {/* Media Engine Section */}
+            <div className="space-y-3 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+              <label className="text-xs font-bold tracking-wider text-slate-700 uppercase flex items-center justify-between">
+                <span>MEDIA TYPE (SHOWCASE FORMAT)</span>
+                <span className="text-[10px] font-semibold text-primary">Image Showcase or YouTube Video</span>
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMediaType("image");
+                    clearError("media_url");
+                  }}
+                  className={cn(
+                    "flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border text-xs font-bold transition-all cursor-pointer",
+                    mediaType === "image"
+                      ? "bg-white border-primary text-primary shadow-xs ring-2 ring-primary/20"
+                      : "bg-white/60 border-slate-200 text-slate-600 hover:bg-white"
+                  )}
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  <span>Image Showcase</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaType("youtube")}
+                  className={cn(
+                    "flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border text-xs font-bold transition-all cursor-pointer",
+                    mediaType === "youtube"
+                      ? "bg-white border-red-500 text-red-600 shadow-xs ring-2 ring-red-500/20"
+                      : "bg-white/60 border-slate-200 text-slate-600 hover:bg-white"
+                  )}
+                >
+                  <Youtube className="w-4 h-4 text-red-500" />
+                  <span>YouTube Video</span>
+                </button>
+              </div>
+
+              {mediaType === "youtube" && (
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-bold tracking-wider text-slate-700 uppercase flex items-center justify-between">
+                    <span>
+                      YOUTUBE VIDEO URL <span className="text-red-500">*</span>
+                    </span>
+                    <span className="text-[10px] font-normal text-slate-400">e.g. https://www.youtube.com/watch?v=...</span>
+                  </label>
+                  <Input
+                    value={mediaUrl}
+                    onChange={(e) => {
+                      setMediaUrl(e.target.value);
+                      clearError("media_url");
+                    }}
+                    placeholder="https://www.youtube.com/watch?v=XXXXXXXX"
+                    className={cn(
+                      "h-10 text-sm font-medium",
+                      fieldErrors.media_url && "border-red-500 focus-visible:ring-red-500/20"
+                    )}
+                  />
+                  {fieldErrors.media_url && (
+                    <p className="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{fieldErrors.media_url}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Section 0: Primary Cover Visual */}
             <div className="space-y-2">
@@ -799,6 +985,54 @@ export default function PortfolioFormModal({
                       <span>{fieldErrors.slug}</span>
                     </p>
                   )}
+                </div>
+              </div>
+
+              {/* Row: Status & Type */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+                    PROJECT STATUS <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {PROJECT_STATUSES.map((st) => (
+                      <button
+                        key={st.value}
+                        type="button"
+                        onClick={() => setProjectStatus(st.value)}
+                        className={cn(
+                          "py-2 px-3 rounded-lg border text-xs font-bold transition-all cursor-pointer",
+                          projectStatus === st.value
+                            ? st.value === "completed"
+                              ? "bg-emerald-50 border-emerald-500 text-emerald-700 ring-2 ring-emerald-500/20 shadow-xs"
+                              : "bg-amber-50 border-amber-500 text-amber-700 ring-2 ring-amber-500/20 shadow-xs"
+                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                        )}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+                    PROJECT TYPE <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={projectType}
+                      onChange={(e) => setProjectType(e.target.value as any)}
+                      className="w-full h-10 pl-3.5 pr-10 rounded-md border border-input bg-white text-sm font-semibold text-slate-800 shadow-xs appearance-none focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+                    >
+                      {PROJECT_TYPES.map((pt) => (
+                        <option key={pt.value} value={pt.value}>
+                          {pt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                 </div>
               </div>
 
@@ -975,31 +1209,17 @@ export default function PortfolioFormModal({
                 />
               </div>
 
-              {/* Row 4: URLs */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-                    LIVE SITE LINK (OPTIONAL)
-                  </label>
-                  <Input
-                    value={liveUrl}
-                    onChange={(e) => setLiveUrl(e.target.value)}
-                    placeholder="https://gaspay.eu"
-                    className="h-10 text-sm font-medium"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-                    APP STORE / PLAY STORE LINK (OPTIONAL)
-                  </label>
-                  <Input
-                    value={appStoreUrl}
-                    onChange={(e) => setAppStoreUrl(e.target.value)}
-                    placeholder="https://apps.apple.com/app/gaspay"
-                    className="h-10 text-sm font-medium"
-                  />
-                </div>
+              {/* Row 4: Project Live Link */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+                  LIVE SITE / PROJECT LINK (OPTIONAL)
+                </label>
+                <Input
+                  value={liveUrl}
+                  onChange={(e) => setLiveUrl(e.target.value)}
+                  placeholder="https://example.com/project"
+                  className="h-10 text-sm font-medium"
+                />
               </div>
 
               {/* Featured toggle */}
@@ -1016,6 +1236,156 @@ export default function PortfolioFormModal({
                   FEATURED STATUS (TOGGLE ON/OFF FOR HOMEPAGE VISIBILITY)
                 </label>
               </div>
+            </div>
+
+            {/* Section: Location & Coverage */}
+            <div className="space-y-4 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-primary" />
+                <span className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+                  PROJECT LOCATION &amp; COVERAGE
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* District Dropdown */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+                    DISTRICT (BANGLADESH)
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={district}
+                      onChange={(e) => setDistrict(e.target.value)}
+                      className="w-full h-10 pl-3.5 pr-10 rounded-md border border-input bg-white text-sm font-medium text-slate-800 shadow-xs appearance-none focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+                    >
+                      {BANGLADESH_DISTRICTS.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Area Dropdown with inline Add */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+                      AREA / ZONE
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingAreaInline(!isAddingAreaInline)}
+                      className="text-[10px] font-semibold text-primary hover:underline cursor-pointer"
+                    >
+                      {isAddingAreaInline ? "Pick from list" : "+ Add new area"}
+                    </button>
+                  </div>
+
+                  {isAddingAreaInline ? (
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        value={newInlineArea}
+                        onChange={(e) => setNewInlineArea(e.target.value)}
+                        placeholder="Type custom area name..."
+                        className="h-10 text-sm font-medium flex-1"
+                        autoFocus
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          const trimmed = newInlineArea.trim();
+                          if (trimmed) {
+                            if (!allAreas.includes(trimmed)) {
+                              setAllAreas((prev) => [trimmed, ...prev]);
+                            }
+                            setArea(trimmed);
+                            setIsAddingAreaInline(false);
+                            setNewInlineArea("");
+                          }
+                        }}
+                        className="h-10 px-3 bg-primary text-white font-bold text-xs"
+                      >
+                        Use
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <select
+                        value={area}
+                        onChange={(e) => {
+                          if (e.target.value === "__custom__") {
+                            setIsAddingAreaInline(true);
+                          } else {
+                            setArea(e.target.value);
+                          }
+                        }}
+                        className="w-full h-10 pl-3.5 pr-10 rounded-md border border-input bg-white text-sm font-medium text-slate-800 shadow-xs appearance-none focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+                      >
+                        <option value="">Select Area (or click + Add)</option>
+                        {allAreas.map((a) => (
+                          <option key={a} value={a}>
+                            {a}
+                          </option>
+                        ))}
+                        <option value="__custom__">+ Add Custom Area...</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Specific Address & Coordinates */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                <div className="md:col-span-2 space-y-1">
+                  <label className="text-[11px] font-semibold text-slate-600 uppercase">
+                    STREET ADDRESS / LANDMARK (OPTIONAL)
+                  </label>
+                  <Input
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="e.g. Sector #9, Uttara, Dhaka"
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-slate-600 uppercase">
+                    COORDINATES (LAT, LNG)
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Input
+                      value={latitude}
+                      onChange={(e) => setLatitude(e.target.value)}
+                      placeholder="Latitude"
+                      className="h-9 text-xs"
+                    />
+                    <Input
+                      value={longitude}
+                      onChange={(e) => setLongitude(e.target.value)}
+                      placeholder="Longitude"
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Rich Project Description */}
+            <div className="space-y-1.5 pt-2">
+              <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+                RICH PROJECT DESCRIPTION / OVERVIEW
+              </label>
+              <Textarea
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Detailed project summary, technical scope, reticulation network layout, pipeline specifications, safety certifications..."
+                className="text-sm font-medium leading-relaxed resize-y"
+              />
             </div>
 
             {/* Section 2: Primary Challenge & Solution */}

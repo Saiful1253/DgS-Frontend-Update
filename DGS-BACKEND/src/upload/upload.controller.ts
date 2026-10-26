@@ -8,7 +8,7 @@ import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes,
   ApiBody, ApiResponse,
 } from '@nestjs/swagger';
-import { multerConfig } from './multer.config';
+import { multerConfig, documentMulterConfig } from './multer.config';
 import { CloudinaryService } from './cloudinary.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -48,6 +48,51 @@ export class UploadController {
     return {
       message: 'Image uploaded successfully',
       ...result,
+    };
+  }
+
+  // ── Document upload (certificates, compliance papers) ─────
+  /**
+   * Accepts an image *or* a PDF and answers with everything the caller needs to
+   * persist one row: the file URL and, for a PDF, a page-1 thumbnail.
+   *
+   * `/upload/image` cannot serve this route. It pins `resource_type: 'image'`
+   * with a webp conversion and a 1200px cap, which would turn a PDF certificate
+   * into a broken one-page image.
+   */
+  @Post('document')
+  @UseInterceptors(FileInterceptor('file', documentMulterConfig))
+  @ApiOperation({ summary: 'Upload a certificate document (image or PDF)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary', description: 'PDF or image (max 10MB)' },
+        folder: { type: 'string', example: 'certificates' },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Document uploaded — returns file URL, type and thumbnail' })
+  async uploadDocument(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('folder') folder = 'certificates',
+  ) {
+    if (!file) throw new BadRequestException('No file uploaded');
+
+    const uploaded = await this.cloudinary.uploadFile(file, folder, undefined, 'document');
+    const isPdf = file.mimetype === 'application/pdf';
+
+    return {
+      message: 'Document uploaded successfully',
+      ...uploaded,
+      file_type: isPdf ? 'pdf' : 'image',
+      // Cloudinary renders page 1 of an image-type PDF at the same public_id
+      // with a .jpg extension — no second upload, no pdf-to-img dependency.
+      thumb_url: isPdf
+        ? uploaded.url.replace(/\.pdf$/i, '.jpg')
+        : uploaded.url,
     };
   }
 

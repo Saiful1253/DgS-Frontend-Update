@@ -17,8 +17,6 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { UploadModule } from './upload/upload.module';
 import { NotificationModule } from './notification/notification.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
-import { ProductsSaasModule } from './products-saas/products-saas.module';
-import { ProductsModule } from './products/products.module';
 import { CareersModule } from './careers/careers.module';
 import { LeadsModule } from './leads/leads.module';
 import { SettingsModule } from './settings/settings.module';
@@ -30,7 +28,6 @@ import { ClientLogosModule } from './client-logos/client-logos.module';
 import { PricingModule } from './pricing/pricing.module';
 import { MailModule } from './common/mail/mail.module';
 import { ServicesModule } from './services/services.module';
-import { TechnologiesModule } from './technologies/technologies.module';
 
 @Module({
   imports: [
@@ -57,8 +54,6 @@ import { TechnologiesModule } from './technologies/technologies.module';
     UploadModule,
     NotificationModule,
     PortfolioModule,
-    ProductsSaasModule,
-    ProductsModule,
     CareersModule,
     LeadsModule,
     SettingsModule,
@@ -70,7 +65,6 @@ import { TechnologiesModule } from './technologies/technologies.module';
     PricingModule,
     MailModule,
     ServicesModule,
-    TechnologiesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

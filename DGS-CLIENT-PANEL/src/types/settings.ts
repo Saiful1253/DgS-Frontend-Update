@@ -40,6 +40,9 @@ export interface SiteConfig {
   emi_tenure_rates?: string;
   /** "true" hides CMS Hero, Reviews, Sales, and advanced settings routes globally. */
   hide_advanced_routes?: string;
+  /** Map pin from `company_settings`; used to build the contact-section embed. */
+  company_latitude?: string;
+  company_longitude?: string;
 }
 
 /**
@@ -63,5 +66,8 @@ export interface CompanySettings {
   social_links?: { linkedin?: string; facebook?: string; twitter?: string; github?: string; youtube?: string };
   calendly_url?: string;
   core_cta_objective?: string;
+  /** Decimal columns arrive as number or string depending on the serializer. */
+  company_latitude?: number | string | null;
+  company_longitude?: number | string | null;
   updated_at?: string;
 }

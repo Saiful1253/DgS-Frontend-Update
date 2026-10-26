@@ -1,11 +1,18 @@
 import {
   Controller,
   Get,
+  Post,
   NotFoundException,
   Param,
   ParseIntPipe,
   Query,
+  Body,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from '../upload/multer.config';
 import { Public } from '../auth/decorators/public.decorator';
 import { HeroService } from '../hero/hero.service';
 import { BlogsService } from '../blogs/blogs.service';
@@ -14,10 +21,10 @@ import { SettingsService } from '../settings/settings.service';
 import { TestimonialsService } from '../testimonials/testimonials.service';
 import { PartnersService } from '../partners/partners.service';
 import { CareersService } from '../careers/careers.service';
-import { ProductsService } from '../products/products.service';
-import { ClientProductQueryDto } from '../products/dto/product.dto';
+import { PublicCertificateQueryDto } from '../settings/dto/public-certificate-query.dto';
 import { ClientLogosService } from '../client-logos/client-logos.service';
 import { PricingService } from '../pricing/pricing.service';
+import { SiteSettingsService } from '../site-settings/site-settings.service';
 
 @Controller('client')
 @Public()
@@ -26,11 +33,11 @@ export class ClientController {
     private readonly heroService: HeroService,
     private readonly blogsService: BlogsService,
     private readonly settingsService: SettingsService,
+    private readonly siteSettingsService: SiteSettingsService,
     private readonly portfolioService: PortfolioService,
     private readonly testimonialsService: TestimonialsService,
     private readonly partnersService: PartnersService,
     private readonly careersService: CareersService,
-    private readonly productsService: ProductsService,
     private readonly clientLogosService: ClientLogosService,
     private readonly pricingService: PricingService,
   ) {}
@@ -54,19 +61,25 @@ export class ClientController {
   @Get('sitemap-catalog')
   @Public()
   async getSitemapCatalog() {
-    const [products, blogs, portfolio] = await Promise.all([
-      this.productsService.findPublicSlugs(),
+    const [blogs, portfolio] = await Promise.all([
       this.blogsService.findPublishedSlugs(),
       this.portfolioService.findPublicSlugs(),
     ]);
 
-    return { products, blogs, portfolio };
+    return { blogs, portfolio };
   }
 
   @Get('config')
   @Public()
   async getConfig() {
-    return this.settingsService.getCompanySettings();
+    const [companySettings, siteSettings] = await Promise.all([
+      this.settingsService.getCompanySettings().catch(() => ({})),
+      this.siteSettingsService.getAllSettings().catch(() => ({})),
+    ]);
+    return {
+      ...(companySettings || {}),
+      ...(siteSettings || {}),
+    };
   }
 
   @Get('hero')
@@ -109,8 +122,30 @@ export class ClientController {
 
   @Get('portfolio')
   @Public()
-  async getPortfolio() {
-    return this.portfolioService.findAll();
+  async getPortfolio(
+    @Query('category') category?: string,
+    @Query('search') search?: string,
+    @Query('featured') featured?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Query('projectType') projectType?: string,
+  ) {
+    return this.portfolioService.findAllPublic(
+      category,
+      search,
+      featured === 'true',
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+      status,
+      projectType,
+    );
+  }
+
+  @Get('portfolio/locations')
+  @Public()
+  async getPortfolioLocations() {
+    return this.portfolioService.getLocations();
   }
 
   @Get('portfolio/categories')
@@ -129,8 +164,18 @@ export class ClientController {
 
   @Get('testimonials')
   @Public()
-  async getTestimonials() {
-    return this.testimonialsService.findAllPublic();
+  async getTestimonials(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('type') type?: string,
+  ) {
+    return this.testimonialsService.findApproved(Number(page), Number(limit), type);
+  }
+
+  @Get('testimonials/featured')
+  @Public()
+  async getFeaturedTestimonials() {
+    return this.testimonialsService.findFeatured();
   }
 
   @Get('partners')
@@ -145,77 +190,7 @@ export class ClientController {
     return this.careersService.findAllJobs(true);
   }
 
-  @Get('technologies')
-  @Public()
-  async getTechnologies() {
-    return this.settingsService.findAllTechnologies();
-  }
 
-  /**
-   * Paged, filtered public catalogue.
-   *
-   * This previously delegated to `ProductsSaasService.findAllPublic()`, which
-   * takes no arguments and returns the whole SaaS catalogue. So the storefront's
-   * `page` / `limit` / `search` / `category` / `brand` / `sort` were silently
-   * discarded, and the entity returned had none of the fields the product pages
-   * read (`images`, `seo_meta`, `category`, `brand`, pricing) - they were
-   * written against the `products` entity this route now serves.
-   *
-   * `ClientProductQueryDto` omits `status`, so only `active` rows are reachable;
-   * `findAllPublic` pins it regardless.
-   */
-  @Get('products')
-  @Public()
-  async getProducts(@Query() query: ClientProductQueryDto) {
-    return this.productsService.findAllPublic(query);
-  }
-
-  @Get('products/:slug')
-  @Public()
-  async getProduct(@Param('slug') slug: string) {
-    // `findBySlug` throws NotFoundException itself, and scopes to
-    // `status = 'active'` so an archived row is invisible, not merely hidden.
-    return this.productsService.findBySlug(slug);
-  }
-
-  /**
-   * Category and brand facets for the storefront filter rail.
-   *
-   * The client panel was calling `/client/categories` and `/client/brands`,
-   * neither of which existed - the real routes live behind
-   * `JwtAuthGuard` on `ProductsController`, so every request
-   * 404'd and the service's never-throw wrapper turned that into a permanently
-   * empty filter list.
-   */
-  @Get('categories')
-  @Public()
-  async getProductCategories() {
-    return this.productsService.findAllCategories();
-  }
-
-  @Get('categories/:categoryId/attributes')
-  @Public()
-  async getProductCategoryAttributes(@Param('categoryId', ParseIntPipe) categoryId: number) {
-    return this.productsService.findCategoryAttributes(categoryId);
-  }
-
-  /**
-   * Spec facet values for a category.
-   *
-   * `attributes` returns only the slots ("Capacity", unit "GB"); a filter needs
-   * the values too, and the storefront had no source for them.
-   */
-  @Get('categories/:categoryId/specs')
-  @Public()
-  async getProductCategorySpecs(@Param('categoryId', ParseIntPipe) categoryId: number) {
-    return this.productsService.findCategorySpecValues(categoryId);
-  }
-
-  @Get('brands')
-  @Public()
-  async getProductBrands() {
-    return this.productsService.findAllBrands();
-  }
 
   @Get('office-hubs')
   @Public()
@@ -223,10 +198,18 @@ export class ClientController {
     return this.settingsService.findAllOfficeHubsPublic();
   }
 
+  /**
+   * Public certificate feed (spec §4).
+   *
+   * `?featured=true` serves the landing strip (the page caps the render at 8),
+   * `?limit`/`?offset` drive the certificates page's incremental loading, and
+   * `?search` covers the site-wide search box. `hasMore` is returned so the
+   * client does not have to infer the end of the set from `data.length`.
+   */
   @Get('certificates')
   @Public()
-  async getCertificates() {
-    return this.settingsService.findAllCertificatesPublic();
+  async getCertificates(@Query() query: PublicCertificateQueryDto) {
+    return this.settingsService.findAllCertificatesPublic(query);
   }
 
   @Get('compliance-docs')

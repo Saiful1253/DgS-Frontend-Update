@@ -46,4 +46,22 @@ export class SiteSettingsController {
     if (!file) throw new BadRequestException('No file uploaded');
     return this.svc.uploadCompanyLogo(file);
   }
+
+  @Post('favicon')
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  @ApiOperation({ summary: 'Upload site favicon → Cloudinary → stores URL in site_settings' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary', description: 'Site favicon image' },
+      },
+    },
+  })
+  uploadFavicon(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    return this.svc.uploadFavicon(file);
+  }
 }

@@ -21,6 +21,10 @@ export interface PortfolioPricingTier {
   sort_order?: number;
 }
 
+export type PortfolioMediaType = 'image' | 'youtube';
+export type PortfolioProjectStatus = 'completed' | 'ongoing';
+export type PortfolioProjectType = 'residential' | 'industrial' | 'commercial_restaurant';
+
 export interface PortfolioItem {
   id: number;
   project_name: string;
@@ -33,6 +37,16 @@ export interface PortfolioItem {
   app_store_url?: string;
   play_store_url?: string;
   is_featured: boolean;
+  media_type?: PortfolioMediaType;
+  media_url?: string;
+  project_status?: PortfolioProjectStatus;
+  project_type?: PortfolioProjectType;
+  district?: string;
+  area?: string;
+  address?: string;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  description?: string;
   cover_image?: string;
   primary_challenge?: string;
   primary_solution?: string;

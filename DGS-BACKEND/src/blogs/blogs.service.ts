@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, LessThanOrEqual } from 'typeorm';
 import { Blog } from './entities/blog.entity';
@@ -875,7 +875,7 @@ export class BlogsService implements OnModuleInit {
   }
 
   // ── Scheduled Publishing Cron ──────────────────────────────────
-  @Cron('59 23 * * *') // Every day at 11:59 PM server time
+  @Cron(CronExpression.EVERY_MINUTE)
   async publishScheduledBlogs() {
     try {
       const due = await this.blogRepo.find({
@@ -883,18 +883,19 @@ export class BlogsService implements OnModuleInit {
       });
       for (const blog of due) {
         blog.status = 'published';
-        if (!blog.published_at) blog.published_at = new Date();
+        if (!blog.published_at) blog.published_at = blog.scheduled_at || new Date();
         blog.scheduled_at = null;
         await this.blogRepo.save(blog);
         await this.autoGenerateSeoForBlog(blog);
       }
-      if (due.length > 0) console.log(`[BlogCron] Nightly publish executed: ${due.length} scheduled blog(s) published.`);
+      if (due.length > 0) console.log(`[BlogCron] Publish executed: ${due.length} scheduled blog(s) published.`);
     } catch (err) {
       console.error('[BlogCron] Scheduled publish failed:', err);
     }
   }
 
   async onModuleInit() {
+    setTimeout(() => this.publishScheduledBlogs(), 2000);
     setTimeout(() => this.backfillBlogSeo(), 5000);
     setTimeout(() => this.backfillBlogTaxonomy(), 8000);
   }

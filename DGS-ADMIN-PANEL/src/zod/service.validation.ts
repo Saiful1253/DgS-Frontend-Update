@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-export const servicePillarSchema = z.object({
+export const serviceCategorySchema = z.object({
   id: z.number().optional(),
-  name: z.string().trim().min(2, "Pillar name is required (at least 2 characters)").max(100),
+  name: z.string().trim().min(2, "Category name is required (at least 2 characters)").max(100),
   slug: z
     .string()
     .trim()
@@ -16,23 +16,10 @@ export const servicePillarSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-export const serviceGroupSchema = z.object({
-  id: z.number().optional(),
-  pillar: z.string().trim().min(2, "Pillar name is required"),
-  name: z.string().trim().min(2, "Group name is required (at least 2 characters)").max(120),
-  slug: z
-    .string()
-    .trim()
-    .min(2, "SEO slug is required")
-    .max(140)
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug may only contain lowercase letters, numbers, and hyphens"),
-  display_order: z.number().int().min(0).default(0),
-  is_active: z.boolean().default(true),
-});
+export const servicePillarSchema = serviceCategorySchema;
 
 export const serviceSchema = z.object({
   id: z.number().optional(),
-  group_id: z.number().int().positive("Please select a service group").nullable().optional(),
   name: z.string().trim().min(2, "Service name is required (at least 2 characters)").max(160),
   slug: z
     .string()
@@ -40,17 +27,39 @@ export const serviceSchema = z.object({
     .min(2, "SEO slug is required")
     .max(180)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug may only contain lowercase letters, numbers, and hyphens"),
-  pillar: z.string().trim().min(2, "Pillar selection is required"),
+  category: z.string().trim().min(2, "Service category is required"),
+  pillar: z.string().trim().optional(),
   description: z
     .string()
     .trim()
-    .min(10, "Description is required (at least 10 characters)")
-    .max(600, "Description is too long (max 600 characters)"),
+    .refine((val) => {
+      const stripped = val.replace(/<[^>]*>/g, "").trim();
+      return stripped.length >= 2;
+    }, "Description is required (at least 2 characters)"),
   icon_url: z.string().trim().max(500).optional().or(z.literal("")),
-  display_order: z.number().int().min(0).default(0),
+  badge_label: z.string().trim().max(100).optional().or(z.literal("")),
+  badge_status: z.string().trim().max(100).optional().or(z.literal("")),
+  sub_title: z.string().trim().max(255).optional().or(z.literal("")),
+  category_tag: z.string().trim().max(100).optional().or(z.literal("")),
+  tier_label: z.string().trim().max(100).optional().or(z.literal("")),
+  image_url: z.string().trim().max(500).optional().or(z.literal("")),
+  is_flagship: z.boolean().default(false),
+  features: z
+    .array(
+      z.object({
+        title: z.string().trim().optional().or(z.literal("")),
+        description: z.string().trim().optional(),
+        icon: z.string().optional(),
+      })
+    )
+    .optional()
+    .default([]),
+  compliance_codes: z.string().trim().max(255).optional().or(z.literal("")),
+  cta_label: z.string().trim().max(100).optional().or(z.literal("")),
+  cta_url: z.string().trim().max(255).optional().or(z.literal("")),
   is_active: z.boolean().default(true),
 });
 
-export type ServicePillarSchemaType = z.infer<typeof servicePillarSchema>;
+export type ServiceCategorySchemaType = z.infer<typeof serviceCategorySchema>;
+export type ServicePillarSchemaType = ServiceCategorySchemaType;
 export type ServiceSchemaType = z.infer<typeof serviceSchema>;
-export type ServiceGroupSchemaType = z.infer<typeof serviceGroupSchema>;

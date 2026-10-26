@@ -1,8 +1,6 @@
 import { DataSource, DeepPartial } from 'typeorm';
 import { dataSourceOptions } from '../data-source';
 import { CompanySetting } from '../../settings/entities/company-setting.entity';
-import { Technology } from '../../settings/entities/technology.entity';
-import { TechnologyCategory } from '../../technologies/entities/technology-category.entity';
 import { Service } from '../../services/entities/service.entity';
 import { ServiceGroup } from '../../services/entities/service-group.entity';
 import { ServicePillar } from '../../services/entities/service-pillar.entity';
@@ -13,8 +11,6 @@ import { HeroMedia } from '../../hero/entities/hero-media.entity';
 import { Portfolio } from '../../portfolio/entities/portfolio.entity';
 import { PortfolioChallenge } from '../../portfolio/entities/portfolio-challenge.entity';
 import { PortfolioPricingTier } from '../../portfolio/entities/portfolio-pricing-tier.entity';
-import { ProductSaas } from '../../products-saas/entities/product-saas.entity';
-import { ProductModule } from '../../products-saas/entities/product-module.entity';
 import { Job } from '../../careers/entities/job.entity';
 import { Lead } from '../../leads/entities/lead.entity';
 import { seedAdminData } from './admin-seed.helper';
@@ -26,15 +22,12 @@ async function seedMilanoVAData() {
   await AppDataSource.initialize();
 
   const companyRepo = AppDataSource.getRepository(CompanySetting);
-  const techRepo = AppDataSource.getRepository(Technology);
-  const techCategoryRepo = AppDataSource.getRepository(TechnologyCategory);
   const serviceRepo = AppDataSource.getRepository(Service);
   const serviceGroupRepo = AppDataSource.getRepository(ServiceGroup);
   const servicePillarRepo = AppDataSource.getRepository(ServicePillar);
   const blogRepo = AppDataSource.getRepository(Blog);
   const blogCategoryRepo = AppDataSource.getRepository(BlogCategory);
   const portfolioRepo = AppDataSource.getRepository(Portfolio);
-  const productSaasRepo = AppDataSource.getRepository(ProductSaas);
   const jobRepo = AppDataSource.getRepository(Job);
   const leadRepo = AppDataSource.getRepository(Lead);
 
@@ -44,7 +37,7 @@ async function seedMilanoVAData() {
     await companyRepo.save({
       id: 1,
       legal_company_name: 'Milanova Technologies S.R.L.',
-      brand_name: 'Digital Gas Service',
+      brand_name: 'Milanova Technologies',
       mission_purpose: 'To build simple, scalable, and secure digital products that empower businesses to operate efficiently and grow without technical friction.',
       incorporation_details: 'Italy Registered, REA MI-2049182',
       eu_standards_badge_info: 'GDPR Compliant · ISO 27001 Certified Architecture',
@@ -71,98 +64,6 @@ async function seedMilanoVAData() {
     });
     console.log(' ✓ Company settings seeded');
   }
-
-  // 2. Technology categories (idempotent by name)
-  // The admin `/technologies` filter chips come from this table, and
-  // `TechnologiesService.deleteCategory` refuses to drop a row that
-  // `technologies.category` still references by name. Canonical order mirrors
-  // the admin panel's TECHNOLOGY_CATEGORIES constant.
-  const rawTechCategories = [
-    { name: 'Frontend', display_order: 1 },
-    { name: 'Backend', display_order: 2 },
-    { name: 'Mobile', display_order: 3 },
-    { name: 'Database', display_order: 4 },
-    { name: 'Cloud', display_order: 5 },
-    { name: 'DevOps', display_order: 6 },
-    { name: 'AI & Automation', display_order: 7 },
-    { name: 'Low-Code', display_order: 8 },
-    { name: 'Image Tune', display_order: 9 },
-    { name: 'Video Tune', display_order: 10 },
-    { name: 'Analytics', display_order: 11 },
-    { name: 'Digital Marketing', display_order: 12 },
-  ];
-
-  const techCategoryByName = new Map<string, TechnologyCategory>();
-  for (const c of rawTechCategories) {
-    let cat = await techCategoryRepo.findOne({ where: { name: c.name } });
-    if (!cat) {
-      cat = await techCategoryRepo.save(techCategoryRepo.create(c));
-    }
-    techCategoryByName.set(c.name, cat);
-  }
-
-  // Adopt any category already in use by a technology but missing from the
-  // canonical list, so no technology points at a row that does not exist.
-  const usedCategories = await techRepo
-    .createQueryBuilder('t')
-    .select('DISTINCT BTRIM(t.category)', 'category')
-    .where('BTRIM(t.category) <> \'\'')
-    .getRawMany<{ category: string }>();
-
-  for (const { category } of usedCategories) {
-    if (techCategoryByName.has(category)) continue;
-    const existing = await techCategoryRepo.findOne({ where: { name: category } });
-    if (existing) {
-      techCategoryByName.set(category, existing);
-      continue;
-    }
-    const max = await techCategoryRepo
-      .createQueryBuilder('c')
-      .select('COALESCE(MAX(c.display_order), 0)', 'max')
-      .getRawOne<{ max: string }>();
-    const saved = await techCategoryRepo.save(
-      techCategoryRepo.create({
-        name: category,
-        display_order: Number(max?.max ?? 0) + 1,
-      }),
-    );
-    techCategoryByName.set(category, saved);
-  }
-  console.log(` ✓ Technology categories seeded (${techCategoryByName.size})`);
-
-  // 2b. Technologies (idempotent by name)
-  // Keyed on name rather than a `count() === 0` guard: the previous guard meant
-  // a database that already had a single technology received none of the rest,
-  // and re-running the seeder after an admin edit could never restore the
-  // canonical stack.
-  const rawTechnologies = [
-    { name: 'Next.js 15', category: 'Frontend', proficiency_tagline: 'Enterprise Standard', display_order: 1 },
-    { name: 'React 19', category: 'Frontend', proficiency_tagline: 'Modern UI', display_order: 2 },
-    { name: '.NET 9 Core', category: 'Backend', proficiency_tagline: 'High Throughput', display_order: 3 },
-    { name: 'NestJS / TypeScript', category: 'Backend', proficiency_tagline: 'Clean Architecture', display_order: 4 },
-    { name: 'PostgreSQL', category: 'Database', proficiency_tagline: 'ACID Relational DB', display_order: 5 },
-    { name: 'AWS Cloud', category: 'Cloud', proficiency_tagline: 'Cloud-Native', display_order: 6 },
-    { name: 'Docker / K8s', category: 'DevOps', proficiency_tagline: 'Containerized Pipelines', display_order: 7 },
-    { name: 'Claude & Cursor API', category: 'AI & Automation', proficiency_tagline: 'AI Code & Agents', display_order: 8 },
-    { name: 'Flutter', category: 'Mobile', proficiency_tagline: 'Cross-Platform', display_order: 9 },
-    { name: 'Capture One / Photoshop', category: 'Image Tune', proficiency_tagline: 'Commercial Retouching', display_order: 10 },
-  ];
-
-  const techNames = rawTechnologies.map((t) => t.name);
-  const existingTechnologies = await techRepo
-    .createQueryBuilder('t')
-    .where('t.name IN (:...names)', { names: techNames })
-    .getMany();
-  const existingTechByName = new Map(existingTechnologies.map((t) => [t.name, t]));
-
-  const missingTechnologies = rawTechnologies.filter((t) => !existingTechByName.has(t.name));
-  if (missingTechnologies.length) {
-    await techRepo.save(missingTechnologies);
-  }
-
-  console.log(
-    ` ✓ Technologies stack seeded (${missingTechnologies.length} inserted, ${existingTechnologies.length} already present)`,
-  );
 
   // 3. Pillars, Groups & 30 SRS Services (Idempotent by slug)
   const rawPillars = [
@@ -315,7 +216,6 @@ async function seedMilanoVAData() {
           pillar: s.pillar,
           description: s.description,
           icon_url: s.icon_url,
-          display_order: s.display_order,
           is_active: true,
           is_deleted: false,
         }),
@@ -1471,36 +1371,6 @@ async function seedMilanoVAData() {
   }
   if (challengeImageFixes > 0) {
     console.log(` ✓ Portfolio challenge images backfilled (${challengeImageFixes})`);
-  }
-
-  // 4. Sample SaaS Product
-  const countProductSaas = await productSaasRepo.count();
-  if (countProductSaas === 0) {
-    await productSaasRepo.save({
-      product_name: 'Milanova Enterprise ERP Engine',
-      slug: 'milanova-enterprise-erp',
-      category: 'Software Engineering',
-      industry_focus: ['Utilities & Energy', 'eCommerce & Retail', 'Healthcare'],
-      deployment_options: ['Cloud SaaS', 'On-Premise', 'Hybrid'],
-      status_badge: 'Ready to Deploy',
-      tags: ['ERP', 'Automation', 'Cloud SaaS'],
-      is_featured: true,
-      cover_image: '/images/products/erp-mockup.png',
-      primary_challenge: 'Fragmented operations across disparate HR, inventory, and billing modules.',
-      primary_solution: 'Unified single-pane operational control plane with real-time analytics and workflow automation.',
-      enable_explore_solution: true,
-      enable_request_demo: true,
-      tech_specs: ['.NET 9 Core', 'PostgreSQL', 'AES-256 Encryption', 'GDPR Compliant'],
-      modules: [
-        {
-          module_name: 'Automated Billing & Invoicing Engine',
-          overview: 'Real-time invoice generation and multi-currency payment gateway integrations.',
-          core_capability: 'Supports recurring subscriptions, automated reminders, and tax compliance across EU & US.',
-          sort_order: 1,
-        },
-      ],
-    });
-    console.log(' ✓ Sample SaaS product seeded');
   }
 
   // 5. Sample Job Circular

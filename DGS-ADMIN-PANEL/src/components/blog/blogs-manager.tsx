@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -32,6 +32,10 @@ export default function BlogsManager({ initialBlogs }: BlogsManagerProps) {
   const router = useRouter();
   const [blogs, setBlogs] = useState<BlogPost[]>(initialBlogs);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setBlogs(initialBlogs);
+  }, [initialBlogs]);
 
   // Search & Filter State
   const [searchDraft, setSearchDraft] = useState("");

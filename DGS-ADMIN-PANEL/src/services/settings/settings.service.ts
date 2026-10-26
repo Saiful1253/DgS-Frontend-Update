@@ -3,6 +3,7 @@ import {
   getSiteConfigAction,
   saveSiteConfigAction,
   uploadCompanyLogoAction,
+  uploadSiteFaviconAction,
 } from "@/actions/settings.actions";
 import type { SiteConfig } from "@/types/settings";
 
@@ -44,3 +45,5 @@ export const saveSiteConfig = (settings: Record<string, string>) =>
   saveSiteConfigAction(settings);
 
 export const uploadCompanyLogo = (formData: FormData) => uploadCompanyLogoAction(formData);
+
+export const uploadSiteFavicon = (formData: FormData) => uploadSiteFaviconAction(formData);

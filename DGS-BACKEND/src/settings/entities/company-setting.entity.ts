@@ -75,6 +75,74 @@ export class CompanySetting {
   @Column({ type: 'text', nullable: true })
   custom_body_scripts: string; // </body> footer scripts & chat widgets
 
+
+  // Branding & Media
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  company_logo: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  company_logo_public_id: string;
+
+  @Column({ type: 'text', nullable: true })
+  footer_text: string;
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  copyright_year: string;
+
+  // SEO Defaults
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  site_meta_title: string;
+
+  @Column({ type: 'text', nullable: true })
+  site_meta_description: string;
+
+  @Column({ type: 'text', nullable: true })
+  site_meta_keywords: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  site_og_image: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  canonical_url: string;
+
+  // Legal
+  @Column({ type: 'text', nullable: true })
+  terms_and_conditions: string;
+
+  @Column({ type: 'text', nullable: true })
+  privacy_policy: string;
+
+  // WhatsApp Popup
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  whatsapp_popup: string;
+
+  // EMI Settings
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  emi_enabled: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  emi_interest_rate: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  emi_min_amount: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  emi_tenures: string;
+
+  @Column({ type: 'text', nullable: true })
+  emi_tenure_rates: string;
+
+  // Feature Flags
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  hide_advanced_routes: string;
+
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  company_latitude: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  company_longitude: number;
+
   @UpdateDateColumn()
   updated_at: Date;
 }

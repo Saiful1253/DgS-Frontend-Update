@@ -44,6 +44,10 @@ export async function listPortfoliosAction(params?: {
   category?: string;
   search?: string;
   featured?: boolean;
+  status?: string;
+  projectType?: string;
+  district?: string;
+  area?: string;
   page?: number;
   limit?: number;
 }): Promise<ActionResult> {
@@ -52,6 +56,10 @@ export async function listPortfoliosAction(params?: {
     if (params?.category) query.set("category", params.category);
     if (params?.search) query.set("search", params.search);
     if (params?.featured !== undefined) query.set("featured", String(params.featured));
+    if (params?.status) query.set("status", params.status);
+    if (params?.projectType) query.set("projectType", params.projectType);
+    if (params?.district) query.set("district", params.district);
+    if (params?.area) query.set("area", params.area);
     if (params?.page) query.set("page", String(params.page));
     if (params?.limit) query.set("limit", String(params.limit));
     const qs = query.toString() ? `?${query.toString()}` : "";

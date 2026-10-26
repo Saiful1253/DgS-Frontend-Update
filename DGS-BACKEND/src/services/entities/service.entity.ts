@@ -28,8 +28,41 @@ export class Service {
   @Column({ type: 'varchar', length: 500, nullable: true })
   icon_url: string;
 
-  @Column({ type: 'int', default: 0 })
-  display_order: number;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  spec_code: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  badge_label: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  badge_status: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  sub_title: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  category_tag: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  tier_label: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  image_url: string | null;
+
+  @Column({ type: 'boolean', default: false })
+  is_flagship: boolean;
+
+  @Column({ type: 'jsonb', nullable: true })
+  features: Array<{ title: string; description?: string; icon?: string }> | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  compliance_codes: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  cta_label: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  cta_url: string | null;
 
   @Column({ type: 'boolean', default: true })
   is_active: boolean;

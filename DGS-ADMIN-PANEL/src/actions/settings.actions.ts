@@ -56,14 +56,24 @@ function revalidateSettingsSurfaces() {
  */
 export async function getSiteConfigAction(): Promise<ActionResult> {
   try {
-    const res = await serverFetch.get("/site-settings");
+    const res = await serverFetch.get("/settings/company");
     if (!res.ok) {
-      return failWithStatus(
-        res.status === 401 || res.status === 403
-          ? unauthorizedMessage("site settings")
-          : await extractApiErrorMessage(res, "Failed to load site config"),
-        res.status
-      );
+      // Fallback to site-settings for backward compatibility
+      const res2 = await serverFetch.get("/site-settings");
+      if (!res2.ok) {
+        return failWithStatus(
+          res2.status === 401 || res2.status === 403
+            ? unauthorizedMessage("site settings")
+            : await extractApiErrorMessage(res2, "Failed to load site config"),
+          res2.status
+        );
+      }
+      const json2 = await parseApiResponse(res2);
+      if (json2?.success === false) {
+        return failWithStatus(json2?.message || "Failed to load site config", json2?.statusCode);
+      }
+      const payload2 = json2?.data ?? json2;
+      return ok("Site config loaded", (payload2 ?? {}) as SiteConfig);
     }
 
     const json = await parseApiResponse(res);
@@ -100,8 +110,13 @@ export async function saveSiteConfigAction(
       );
     }
 
+    // Save to site-settings (primary store for branding, logos, coordinates & SEO)
     const res = await serverFetch.post("/site-settings", { body: JSON.stringify(settings) });
     const result = fromServiceResponse(await parseApiResponse(res), "Failed to save site config");
+    
+    // Also sync to settings/company
+    await serverFetch.put("/settings/company", { body: JSON.stringify(settings) }).catch(() => {});
+
     if (!result.success) return result;
 
     revalidateSettingsSurfaces();
@@ -123,5 +138,20 @@ export async function uploadCompanyLogoAction(formData: FormData): Promise<Actio
     return { ...result, message: result.message || "Company logo uploaded successfully" };
   } catch (e: unknown) {
     return fail(e instanceof Error ? e.message : "Failed to upload logo");
+  }
+}
+
+export async function uploadSiteFaviconAction(formData: FormData): Promise<ActionResult> {
+  try {
+    if (!formData.get("file")) return fail("No file selected");
+
+    const res = await serverFetch.post("/site-settings/favicon", { body: formData });
+    const result = fromServiceResponse(await parseApiResponse(res), "Failed to upload favicon");
+    if (!result.success) return result;
+
+    revalidateSettingsSurfaces();
+    return { ...result, message: result.message || "Favicon uploaded successfully" };
+  } catch (e: unknown) {
+    return fail(e instanceof Error ? e.message : "Failed to upload favicon");
   }
 }

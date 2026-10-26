@@ -1,19 +1,36 @@
+import { CloudinaryService } from '@/upload/cloudinary.service';
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Technology } from './entities/technology.entity';
 import { CompanySetting } from './entities/company-setting.entity';
 import { OfficeHub } from './entities/office-hub.entity';
 import { Certificate } from './entities/certificate.entity';
 import { ComplianceDocument } from './entities/compliance-document.entity';
+import { PublicCertificateQueryDto } from './dto/public-certificate-query.dto';
+import { AdminCertificateQueryDto } from './dto/admin-certificate-query.dto';
+
+/**
+ * Collapse cleared inputs to `null`.
+ *
+ * A form that empties an optional field submits `""`, and storing that empties
+ * the column no worse than a null — except that `thumb_url: ''` renders as a
+ * broken image while `thumb_url: null` falls back to `file_url`, and
+ * `issuing_authority: ''` prints an empty line under the title.
+ */
+function emptyStringsToNull<T extends Record<string, unknown>>(data: T): Partial<T> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    out[key] = typeof value === 'string' && value.trim() === '' ? null : value;
+  }
+  return out as Partial<T>;
+}
 
 @Injectable()
 export class SettingsService {
   constructor(
-    @InjectRepository(Technology)
-    private techRepo: Repository<Technology>,
     @InjectRepository(CompanySetting)
     private companyRepo: Repository<CompanySetting>,
+    private cloudinary: CloudinaryService,
     @InjectRepository(OfficeHub)
     private hubRepo: Repository<OfficeHub>,
     @InjectRepository(Certificate)
@@ -24,58 +41,7 @@ export class SettingsService {
 
   // Technologies
   //
-  // `includeInactive` exists because the admin CMS has to manage entries it has
-  // switched off. The previous unconditional `is_active = true` filter meant a
-  // deactivated technology disappeared from the admin list with no way to bring
-  // it back — the row was still in the table, just invisible to the only screen
-  // that could edit it. The public catalogue keeps the active-only default.
-  async findAllTechnologies(category?: string, includeInactive = false) {
-    const qb = this.techRepo.createQueryBuilder('t')
-      .orderBy('t.display_order', 'ASC')
-      .addOrderBy('t.name', 'ASC');
 
-    if (!includeInactive) {
-      qb.where('t.is_active = true');
-    }
-
-    if (category && category !== 'All') {
-      qb.andWhere('t.category ILIKE :category', { category: `%${category}%` });
-    }
-
-    return qb.getMany();
-  }
-
-  async createTechnology(data: Partial<Technology>) {
-    const tech = this.techRepo.create(data);
-    return this.techRepo.save(tech);
-  }
-
-  async updateTechnology(id: number, data: Partial<Technology>) {
-    await this.techRepo.update(id, data);
-    return this.techRepo.findOneBy({ id });
-  }
-
-  async reorderTechnologies(order: { id: number; display_order: number }[]): Promise<boolean> {
-    if (!order || !order.length) return true;
-    const ids = order.map((o) => o.id);
-    const uniqueIds = [...new Set(ids)];
-    if (uniqueIds.length !== ids.length) {
-      throw new BadRequestException('Duplicate ids in technology reorder payload');
-    }
-    return this.techRepo.manager.transaction(async (manager) => {
-      for (const item of order) {
-        await manager.update(Technology, { id: item.id }, {
-          display_order: item.display_order,
-        });
-      }
-      return true;
-    });
-  }
-
-  async removeTechnology(id: number) {
-    await this.techRepo.delete(id);
-    return { success: true };
-  }
 
   // Company Overview Settings
   async getCompanySettings() {
@@ -84,7 +50,7 @@ export class SettingsService {
       settings = this.companyRepo.create({
         id: 1,
         legal_company_name: 'Milanova Technologies S.R.L.',
-        brand_name: 'Digital Gas Service',
+        brand_name: 'Milanova Technologies',
         primary_headquarters_address: 'Via Rome 45, Milan, Italy',
         official_emails: { general: 'info@milanovatech.com', sales: 'sales@milanovatech.com' },
         calendly_url: 'https://calendly.com/milanova-tech/30min',
@@ -94,7 +60,7 @@ export class SettingsService {
     return settings;
   }
 
-  async updateCompanySettings(data: Partial<CompanySetting>) {
+  async updateCompanySettings(data: any) {
     const settings = await this.getCompanySettings();
     Object.assign(settings, data);
     return this.companyRepo.save(settings);
@@ -148,18 +114,89 @@ export class SettingsService {
   }
 
   // Certificates
-  async findAllCertificates() {
-    return this.certRepo.find({
-      where: { is_deleted: false },
-      order: { year: 'DESC', id: 'ASC' },
-    });
+  /**
+   * Admin listing: server-paginated, searchable, sortable, filterable.
+   *
+   * The admin table reads one page at a time rather than the whole library, so
+   * `display_order` and `created_at` are the only columns the browser can sort
+   * by — those are the two an editor actually reaches for, and keeping the list
+   * narrow keeps the ORDER BY allow-list in the DTO short.
+   */
+  async findAllCertificates(query: AdminCertificateQueryDto = {}) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const term = query.search?.trim();
+
+    const qb = this.certRepo
+      .createQueryBuilder('c')
+      .where('c.is_deleted = false');
+
+    if (term) {
+      // `reg_no` is searched alongside the copy: it is the string a client
+      // reads off the storefront card and quotes when asking about a licence.
+      qb.andWhere(
+        '(c.title ILIKE :term OR c.reg_no ILIKE :term OR c.issuing_authority ILIKE :term OR c.sub_label ILIKE :term)',
+        { term: `%${term}%` },
+      );
+    }
+
+    if (typeof query.is_active === 'boolean') {
+      qb.andWhere('c.is_active = :isActive', { isActive: query.is_active });
+    }
+    if (typeof query.is_featured === 'boolean') {
+      qb.andWhere('c.is_featured = :isFeatured', { isFeatured: query.is_featured });
+    }
+    if (query.file_type) {
+      qb.andWhere('c.file_type = :fileType', { fileType: query.file_type });
+    }
+
+    const sortBy = query.sortBy ?? 'display_order';
+    const direction = (query.sortOrder ?? 'asc').toUpperCase() as 'ASC' | 'DESC';
+    // `sortBy` comes from the DTO allow-list, so it is safe to interpolate.
+    // `id` breaks ties, otherwise two rows sharing a display order can swap
+    // places between pages and the table appears to skip a row.
+    qb.orderBy(`c.${sortBy}`, direction).addOrderBy('c.id', 'DESC');
+
+    const [data, total] = await qb.skip((page - 1) * limit).take(limit).getManyAndCount();
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
-  async findAllCertificatesPublic() {
-    return this.certRepo.find({
-      where: { is_active: true, is_deleted: false },
-      order: { year: 'DESC', id: 'ASC' },
-    });
+  /**
+   * Public listing (spec §4): featured-only for the landing page, otherwise an
+   * offset-paged slice for the certificates page. Search spans both title
+   * columns plus the issuing authority, which is what a visitor remembers about
+   * a licence ("Titas", "ISO 9001") rather than its exact wording.
+   */
+  async findAllCertificatesPublic(query: PublicCertificateQueryDto = {}) {
+    const limit = Math.min(query.limit ?? 20, 60);
+    const offset = query.offset ?? 0;
+    const term = query.search?.trim();
+
+    const qb = this.certRepo
+      .createQueryBuilder('c')
+      .where('c.is_active = true')
+      .andWhere('c.is_deleted = false');
+
+    if (query.featured) {
+      qb.andWhere('c.is_featured = true');
+    }
+
+    if (term) {
+      qb.andWhere(
+        '(c.title ILIKE :term OR c.issuing_authority ILIKE :term)',
+        { term: `%${term}%` },
+      );
+    }
+
+    const [data, total] = await qb
+      .orderBy('c.display_order', 'ASC')
+      .addOrderBy('c.id', 'DESC')
+      .skip(offset)
+      .take(limit)
+      .getManyAndCount();
+
+    return { data, total, limit, offset, hasMore: offset + data.length < total };
   }
 
   async findCertificate(id: number) {
@@ -169,14 +206,30 @@ export class SettingsService {
   }
 
   async createCertificate(data: Partial<Certificate>) {
-    const item = this.certRepo.create(data);
+    const item = this.certRepo.create({ ...data, ...emptyStringsToNull(data) });
     return this.certRepo.save(item);
   }
 
   async updateCertificate(id: number, data: Partial<Certificate>) {
     const item = await this.findCertificate(id);
-    Object.assign(item, data);
+    Object.assign(item, data, emptyStringsToNull(data));
     return this.certRepo.save(item);
+  }
+
+  async getCertificateStats() {
+    const [total, active, featured] = await Promise.all([
+      this.certRepo.count({ where: { is_deleted: false } }),
+      this.certRepo.count({ where: { is_active: true, is_deleted: false } }),
+      this.certRepo.count({ where: { is_featured: true, is_deleted: false } }),
+    ]);
+    return { total, active, featured, inactive: total - active };
+  }
+
+  async reorderCertificates(order: { id: number; display_order: number }[]) {
+    for (const item of order) {
+      await this.certRepo.update(item.id, { display_order: item.display_order });
+    }
+    return { success: true };
   }
 
   async removeCertificate(id: number) {
@@ -223,5 +276,32 @@ export class SettingsService {
     item.is_deleted = true;
     await this.complianceRepo.save(item);
     return { success: true };
+  }
+
+  async uploadCompanyLogo(file: Express.Multer.File) {
+    const settings = await this.getCompanySettings();
+    if ((settings as any).company_logo_public_id) {
+      try {
+        await this.cloudinary.deleteFile((settings as any).company_logo_public_id);
+      } catch {}
+    }
+
+    const uploaded = await this.cloudinary.uploadFile(
+      file,
+      'company',
+      `logo-${Date.now()}`,
+    );
+
+    settings.company_logo = uploaded.url;
+    (settings as any).company_logo_public_id = uploaded.public_id;
+    await this.companyRepo.save(settings);
+
+    return {
+      url: uploaded.url,
+      public_id: uploaded.public_id,
+      width: uploaded.width,
+      height: uploaded.height,
+      format: uploaded.format,
+    };
   }
 }

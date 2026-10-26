@@ -66,3 +66,37 @@ export const multerConfig = {
     }
   },
 };
+
+/**
+ * Multer config for document uploads (certificates, compliance papers).
+ *
+ * Same in-memory pipeline as `multerConfig`, widened to accept PDF and given a
+ * larger ceiling — a scanned multi-page licence is a normal upload, not an
+ * exception. Files are still piped straight to Cloudinary, never to disk.
+ */
+export const documentMulterConfig = {
+  storage: memoryStorage(),
+
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB per file
+    files: 1,
+  },
+
+  fileFilter: (
+    _req: any,
+    file: Express.Multer.File,
+    callback: (error: Error | null, acceptFile: boolean) => void,
+  ) => {
+    const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) {
+      callback(null, true);
+    } else {
+      callback(
+        new BadRequestException(
+          `Invalid file type: ${file.mimetype}. Allowed: PDF, JPEG, PNG, WebP`,
+        ),
+        false,
+      );
+    }
+  },
+};

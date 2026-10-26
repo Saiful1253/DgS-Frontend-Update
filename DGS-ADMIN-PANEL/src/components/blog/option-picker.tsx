@@ -21,6 +21,7 @@ interface OptionPickerProps {
   createPrefix?: string;
   closeOnSelect?: boolean;
   pageSize?: number;
+  hideChips?: boolean;
 }
 
 export default function OptionPicker({
@@ -35,6 +36,7 @@ export default function OptionPicker({
   createPrefix = "+ Create",
   closeOnSelect = false,
   pageSize = 8,
+  hideChips = false,
 }: OptionPickerProps) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -50,13 +52,16 @@ export default function OptionPicker({
 
   const trimmed = query.trim();
   const qLower = trimmed.toLowerCase();
-  const exactMatch = options.some(
-    (o) => o.key.toLowerCase() === qLower || o.label.replace(/^#+/, "").toLowerCase() === qLower.replace(/^#+/, "")
-  );
+  const exactMatch = options.some((o) => {
+    const k = (o.key != null) ? String(o.key).toLowerCase() : "";
+    const l = ((o.label != null) ? String(o.label).replace(/^#+/, "") : "").toLowerCase();
+    const qn = qLower.replace(/^#+/, "");
+    return (k && k === qn) || (l && l === qn);
+  });
   const showCreateOption = allowCreate && trimmed.length > 0 && !exactMatch;
 
   const handleCreate = (val: string) => {
-    const cleanVal = val.trim().replace(/^#+/, "");
+    const cleanVal = (val || "").trim().replace(/^#+/, "");
     if (!cleanVal) return;
     if (onCreate) {
       onCreate(cleanVal);
@@ -99,9 +104,12 @@ export default function OptionPicker({
 
   const filtered = useMemo(() => {
     if (!qLower) return options;
-    return options.filter(
-      (o) => o.label.toLowerCase().includes(qLower) || (o.hint || "").toLowerCase().includes(qLower)
-    );
+    return options.filter((o) => {
+      const label = (o.label != null) ? String(o.label).toLowerCase() : "";
+      const hint = (o.hint != null) ? String(o.hint).toLowerCase() : "";
+      const key = (o.key != null) ? String(o.key).toLowerCase() : "";
+      return label.includes(qLower) || hint.includes(qLower) || key.includes(qLower);
+    });
   }, [options, qLower]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -209,14 +217,15 @@ export default function OptionPicker({
             {!anyOnPage ? (
               <div className="p-3 text-center text-[11px] text-slate-400">{emptyText}</div>
             ) : (
-              pageOptions.map((o) => {
-                const on = selected.includes(o.key);
+              pageOptions.map((o, idx) => {
+                const k = (o.key != null && String(o.key).trim() !== "") ? String(o.key) : `opt-${idx}-${o.label != null ? String(o.label).replace(/\s+/g, "-") : "item"}`;
+                const on = selected.includes(k) || (o.key != null ? selected.includes(String(o.key)) : false);
                 return (
                   <button
-                    key={o.key}
+                    key={`${k}-${idx}`}
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => pick(o.key)}
+                    onClick={() => pick((o.key != null && String(o.key).trim() !== "") ? String(o.key) : k)}
                     className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 transition-colors cursor-pointer"
                   >
                     <span className={cn(
@@ -278,11 +287,11 @@ export default function OptionPicker({
       </Popover>
 
       {/* Selected chips */}
-      {selected.length > 0 && (
+      {!hideChips && selected.length > 0 && (
         <div className="flex flex-wrap gap-1.5 pt-0.5">
           {selected.map((key) => {
             const opt = options.find((o) => o.key === key);
-            const label = opt ? opt.label : `#${key}`;
+            const label = opt ? opt.label : (allowCreate ? `#${key.replace(/^#+/, "")}` : key);
             return (
               <span
                 key={key}

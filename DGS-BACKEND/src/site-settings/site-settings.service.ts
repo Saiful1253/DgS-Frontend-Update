@@ -78,4 +78,28 @@ export class SiteSettingsService {
       format: uploaded.format,
     };
   }
+
+  async uploadFavicon(file: Express.Multer.File) {
+    const existing = await this.settingRepo.findOne({ where: { key: 'site_favicon_public_id' } });
+    if (existing?.value) {
+      await this.cloudinary.deleteFile(existing.value);
+    }
+
+    const uploaded = await this.cloudinary.uploadFile(
+      file,
+      'company',
+      `favicon-${Date.now()}`,
+    );
+
+    await this.upsertSetting('site_favicon', uploaded.url);
+    await this.upsertSetting('site_favicon_public_id', uploaded.public_id);
+
+    return {
+      url: uploaded.url,
+      public_id: uploaded.public_id,
+      width: uploaded.width,
+      height: uploaded.height,
+      format: uploaded.format,
+    };
+  }
 }

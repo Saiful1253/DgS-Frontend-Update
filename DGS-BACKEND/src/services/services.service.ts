@@ -11,6 +11,7 @@ import {
   EntityTarget,
   ObjectLiteral,
   In,
+  Not,
 } from 'typeorm';
 import { Service } from './entities/service.entity';
 import { ServiceGroup } from './entities/service-group.entity';
@@ -47,17 +48,32 @@ export class ServicesService {
   // therefore resolves the pillar through ONE row and derives both columns from
   // it — divergence stops being expressible.
 
-  /** Resolve a pillar by name or slug, or 400. Soft-deleted pillars do not count. */
+  /** Resolve a category/pillar by name or slug, or auto-create if not yet registered. */
   private async resolvePillar(value: string): Promise<ServicePillar> {
-    const pillar = await this.pillarRepo.findOne({
-      where: [{ name: value }, { slug: value }],
-      is_deleted: false,
-    } as any);
+    const trimmed = (value || '').trim();
+    if (!trimmed) {
+      throw new BadRequestException('Service category is required');
+    }
+
+    let pillar = await this.pillarRepo
+      .createQueryBuilder('p')
+      .where('LOWER(p.name) = LOWER(:val) OR LOWER(p.slug) = LOWER(:val)', { val: trimmed })
+      .andWhere('p.is_deleted = false')
+      .getOne();
 
     if (!pillar) {
-      throw new BadRequestException(
-        `Service pillar "${value}" does not exist. Create the pillar first, then assign the service or group to it.`,
-      );
+      const slug = trimmed
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-');
+      pillar = this.pillarRepo.create({
+        name: trimmed,
+        slug: slug || `cat-${Date.now()}`,
+        display_label: trimmed,
+        display_order: 0,
+        is_active: true,
+      });
+      pillar = await this.pillarRepo.save(pillar);
     }
     return pillar;
   }
@@ -295,12 +311,12 @@ export class ServicesService {
     const sortColumnMap: Record<ServiceSortBy, string> = {
       [ServiceSortBy.NAME]: 's.name',
       [ServiceSortBy.PILLAR]: 'p.name',
-      [ServiceSortBy.DISPLAY_ORDER]: 's.display_order',
+      [ServiceSortBy.DISPLAY_ORDER]: 's.created_at',
       [ServiceSortBy.CREATED_AT]: 's.created_at',
       [ServiceSortBy.UPDATED_AT]: 's.updated_at',
     };
 
-    const sortCol = sortColumnMap[query.sortBy || ServiceSortBy.DISPLAY_ORDER] || 's.display_order';
+    const sortCol = sortColumnMap[query.sortBy || ServiceSortBy.CREATED_AT] || 's.created_at';
     const sortDir = (query.sortOrder || SortOrder.ASC).toUpperCase() as 'ASC' | 'DESC';
 
     qb.orderBy(sortCol, sortDir);
@@ -336,7 +352,7 @@ export class ServicesService {
       // order, which makes the public group sequence unstable between requests.
       .orderBy('p.display_order', 'ASC')
       .addOrderBy('p.name', 'ASC')
-      .addOrderBy('s.display_order', 'ASC')
+      .addOrderBy('s.created_at', 'ASC')
       .addOrderBy('s.id', 'ASC')
       .getMany();
 
@@ -378,12 +394,21 @@ export class ServicesService {
   async create(dto: CreateServiceDto): Promise<Service> {
     const pillar = await this.resolvePillar(dto.pillar);
 
-    if (dto.group_id != null) {
-      await this.resolveGroup(dto.group_id, pillar.id);
+    if (dto.group_id && Number(dto.group_id) > 0) {
+      await this.resolveGroup(Number(dto.group_id), pillar.id);
+    }
+
+    if (dto.is_flagship) {
+      await this.serviceRepo
+        .createQueryBuilder()
+        .update(Service)
+        .set({ is_flagship: false })
+        .where('is_deleted = false')
+        .execute();
     }
 
     const service = this.serviceRepo.create({
-      group_id: dto.group_id ?? null,
+      group_id: dto.group_id && Number(dto.group_id) > 0 ? Number(dto.group_id) : null,
       pillar_id: pillar.id,
       name: dto.name,
       slug: dto.slug,
@@ -391,8 +416,19 @@ export class ServicesService {
       pillar: pillar.name,
       description: dto.description || null,
       icon_url: dto.icon_url || null,
-      display_order: dto.display_order ?? 0,
-      is_active: dto.is_active ?? true,
+      spec_code: dto.spec_code || null,
+      badge_label: dto.badge_label || null,
+      badge_status: dto.badge_status || null,
+      sub_title: dto.sub_title || null,
+      category_tag: dto.category_tag || null,
+      tier_label: dto.tier_label || null,
+      image_url: dto.image_url || null,
+      is_flagship: dto.is_flagship ?? false,
+      features: dto.features && dto.features.length > 0 ? dto.features : null,
+      compliance_codes: dto.compliance_codes || null,
+      cta_label: dto.cta_label || null,
+      cta_url: dto.cta_url || null,
+      is_active: dto.is_flagship ? true : (dto.is_active ?? true),
     });
 
     return await this.serviceRepo.save(service);
@@ -404,20 +440,44 @@ export class ServicesService {
     const pillar = dto.pillar ? await this.resolvePillar(dto.pillar) : null;
     const targetPillarId = pillar ? pillar.id : service.pillar_id;
 
-    if (dto.group_id != null) {
-      await this.resolveGroup(dto.group_id, targetPillarId);
+    if (dto.group_id && Number(dto.group_id) > 0) {
+      await this.resolveGroup(Number(dto.group_id), targetPillarId);
+    }
+
+    if (dto.is_flagship === false && service.is_flagship) {
+      throw new BadRequestException('At least one service must remain featured');
+    }
+
+    if (dto.is_flagship) {
+      await this.serviceRepo
+        .createQueryBuilder()
+        .update(Service)
+        .set({ is_flagship: false })
+        .where('id != :id AND is_deleted = false', { id })
+        .execute();
     }
 
     Object.assign(service, {
-      ...(dto.group_id !== undefined ? { group_id: dto.group_id } : {}),
+      ...(dto.group_id !== undefined ? { group_id: dto.group_id && Number(dto.group_id) > 0 ? Number(dto.group_id) : null } : {}),
       ...(dto.name !== undefined ? { name: dto.name } : {}),
       ...(dto.slug !== undefined ? { slug: dto.slug } : {}),
       // Both columns move together, so they can no longer disagree.
       ...(pillar ? { pillar: pillar.name, pillar_id: pillar.id } : {}),
-      ...(dto.description !== undefined ? { description: dto.description } : {}),
-      ...(dto.icon_url !== undefined ? { icon_url: dto.icon_url } : {}),
-      ...(dto.display_order !== undefined ? { display_order: dto.display_order } : {}),
-      ...(dto.is_active !== undefined ? { is_active: dto.is_active } : {}),
+      ...(dto.description !== undefined ? { description: dto.description || null } : {}),
+      ...(dto.icon_url !== undefined ? { icon_url: dto.icon_url || null } : {}),
+      ...(dto.spec_code !== undefined ? { spec_code: dto.spec_code || null } : {}),
+      ...(dto.badge_label !== undefined ? { badge_label: dto.badge_label || null } : {}),
+      ...(dto.badge_status !== undefined ? { badge_status: dto.badge_status || null } : {}),
+      ...(dto.sub_title !== undefined ? { sub_title: dto.sub_title || null } : {}),
+      ...(dto.category_tag !== undefined ? { category_tag: dto.category_tag || null } : {}),
+      ...(dto.tier_label !== undefined ? { tier_label: dto.tier_label || null } : {}),
+      ...(dto.image_url !== undefined ? { image_url: dto.image_url || null } : {}),
+      ...(dto.is_flagship !== undefined ? { is_flagship: dto.is_flagship } : {}),
+      ...(dto.features !== undefined ? { features: dto.features && dto.features.length > 0 ? dto.features : null } : {}),
+      ...(dto.compliance_codes !== undefined ? { compliance_codes: dto.compliance_codes || null } : {}),
+      ...(dto.cta_label !== undefined ? { cta_label: dto.cta_label || null } : {}),
+      ...(dto.cta_url !== undefined ? { cta_url: dto.cta_url || null } : {}),
+      ...(dto.is_flagship ? { is_active: true } : (dto.is_active !== undefined ? { is_active: dto.is_active } : {})),
     });
 
     return await this.serviceRepo.save(service);
@@ -425,12 +485,18 @@ export class ServicesService {
 
   async toggleStatus(id: number, is_active: boolean): Promise<Service> {
     const service = await this.findOne(id);
+    if (service.is_flagship && !is_active) {
+      throw new BadRequestException('Cannot deactivate the featured service. Feature another service first.');
+    }
     service.is_active = is_active;
     return await this.serviceRepo.save(service);
   }
 
   async remove(id: number): Promise<{ message: string }> {
     const service = await this.findOne(id);
+    if (service.is_flagship) {
+      throw new BadRequestException('Cannot delete the featured service. Feature another service first.');
+    }
     await this.serviceRepo.update({ id }, { is_deleted: true });
 
     // Legacy rows were keyed by the name-slug; current rows use the service slug.
@@ -460,8 +526,8 @@ export class ServicesService {
     return { message: 'Service soft-deleted successfully' };
   }
 
-  async reorder(order: OrderItem[]): Promise<boolean> {
-    return this.applyOrder(Service, order, 'service');
+  async reorder(_order: OrderItem[]): Promise<boolean> {
+    return true;
   }
 
   async reorderGroups(order: OrderItem[]): Promise<boolean> {

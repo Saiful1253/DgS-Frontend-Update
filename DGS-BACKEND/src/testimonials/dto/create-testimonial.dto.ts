@@ -4,11 +4,14 @@ import {
 } from 'class-validator';
 
 export class CreateTestimonialDto {
-  @IsString() @IsNotEmpty() @MaxLength(50)
-  kind: string;
+  @IsOptional() @IsString() @MaxLength(50)
+  kind?: string;
 
-  @IsString() @IsNotEmpty() @MaxLength(255)
-  author_name: string;
+  @IsOptional() @IsString() @MaxLength(255)
+  author_name?: string;
+
+  @IsOptional() @IsString() @MaxLength(255)
+  customer_name?: string;
 
   @IsOptional() @IsString() @MaxLength(255)
   author_role?: string;
@@ -18,6 +21,21 @@ export class CreateTestimonialDto {
 
   @IsOptional() @IsString() @MaxLength(500)
   avatar_url?: string;
+
+  @IsOptional() @IsString() @MaxLength(512)
+  image_url?: string;
+
+  @IsOptional() @IsString()
+  image_public_id?: string;
+
+  @IsOptional() @IsString() @MaxLength(20)
+  type?: string; // 'text' | 'image'
+
+  @IsOptional() @IsString() @MaxLength(20)
+  status?: 'pending' | 'approved' | 'rejected';
+
+  @IsOptional() @IsString() @MaxLength(20)
+  source?: string;
 
   @IsOptional() @IsString() @MaxLength(500)
   client_logo_url?: string;

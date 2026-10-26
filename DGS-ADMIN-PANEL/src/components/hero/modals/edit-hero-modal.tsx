@@ -47,6 +47,14 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+
+const isSupportedImage = (file: File): boolean => {
+  if (file.type && ALLOWED_IMAGE_TYPES.includes(file.type)) return true;
+  const name = file.name.toLowerCase();
+  return ALLOWED_IMAGE_EXTS.some((ext) => name.endsWith(ext));
+};
 
 interface EditHeroModalProps {
   hero: HeroSection;
@@ -123,8 +131,12 @@ export default function EditHeroModal({ hero, onSave, trigger, disabled = false 
   const handleAddImages = (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const validFiles = Array.from(files).filter(file => {
+      if (!isSupportedImage(file)) {
+        toast.error(`"${file.name}" is not a supported image. Only JPG, PNG, WebP, and GIF are allowed.`);
+        return false;
+      }
       if (file.size > MAX_FILE_SIZE) {
-        toast.error(`File ${file.name} exceeds 5MB limit.`);
+        toast.error(`File "${file.name}" exceeds 5MB limit.`);
         return false;
       }
       return true;
@@ -196,8 +208,13 @@ export default function EditHeroModal({ hero, onSave, trigger, disabled = false 
   const handleReplaceFile = (files: FileList | null) => {
     if (!files || files.length === 0 || !replacingMediaId) return;
     const file = files[0];
+    if (!isSupportedImage(file)) {
+      toast.error(`Please Choose an Image file`);
+      setReplacingMediaId(null);
+      return;
+    }
     if (file.size > MAX_FILE_SIZE) {
-      toast.error(`File ${file.name} exceeds 5MB limit.`);
+      toast.error(`File size exceeds 5MB limit.`);
       setReplacingMediaId(null);
       return;
     }
@@ -323,41 +340,66 @@ export default function EditHeroModal({ hero, onSave, trigger, disabled = false 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold">Hero Media Assets :</label>
-              <input type="file" multiple accept="image/*" className="hidden" ref={fileInputRef} onChange={(e) => handleAddImages(e.target.files)} />
-              <input type="file" accept="image/*" className="hidden" ref={replaceInputRef} onChange={(e) => handleReplaceFile(e.target.files)} />
+              <input
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  handleAddImages(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                ref={replaceInputRef}
+                onChange={(e) => {
+                  handleReplaceFile(e.target.files);
+                  e.target.value = "";
+                }}
+              />
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-xs font-bold uppercase tracking-wider text-slate-500 bg-white hover:bg-slate-50 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Image(s)
-              </button>
-              <div className="flex-1 flex flex-col sm:flex-row gap-2">
-                <Input
-                  value={youtubeUrl}
-                  onChange={(e) => { setYoutubeUrl(e.target.value); setYoutubeError(""); }}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddYouTube(); } }}
-                  placeholder="Paste YouTube link (watch?v= / youtu.be / embed / shorts)"
-                  className="flex-1 text-xs"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddYouTube}
-                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-red-200 text-red-600 text-xs font-bold uppercase tracking-wider bg-red-50 hover:bg-red-100 transition-colors"
-                >
-                  <Youtube className="w-4 h-4" />
-                  Add Video
-                </button>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="p-4 rounded-xl border-2 border-dashed bg-slate-50/50 hover:bg-slate-50 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-2 border-slate-200 hover:border-[#00668a]/50"
+            >
+              <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                <Upload className="h-5 w-5 text-[#00668a]" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-700">
+                  Click to upload an image
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  High-resolution photo of gas pipeline, manifold, or industrial plant
+                </p>
               </div>
             </div>
-            <p className="text-[10px] font-semibold text-slate-400">
-              Photo expected — JPG / PNG / WebP etc., max 5MB per image, up to 10 images per upload.
-            </p>
+
+            {/* Video addition option commented out for reuse
+            <div className="flex-1 flex flex-col sm:flex-row gap-2">
+              <Input
+                value={youtubeUrl}
+                onChange={(e) => { setYoutubeUrl(e.target.value); setYoutubeError(""); }}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddYouTube(); } }}
+                placeholder="Paste YouTube link (watch?v= / youtu.be / embed / shorts)"
+                className="flex-1 text-xs"
+              />
+              <button
+                type="button"
+                onClick={handleAddYouTube}
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-red-200 text-red-600 text-xs font-bold uppercase tracking-wider bg-red-50 hover:bg-red-100 transition-colors"
+              >
+                <Youtube className="w-4 h-4" />
+                Add Video
+              </button>
+            </div>
             {youtubeError && <p className="text-[10px] font-bold text-red-500">{youtubeError}</p>}
+            */}
 
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={visualMedia.map(m => m.id || m.tempId)} strategy={verticalListSortingStrategy}>
@@ -446,8 +488,8 @@ export default function EditHeroModal({ hero, onSave, trigger, disabled = false 
                         <span className={cn(
                           "text-[9px] px-1.5 py-0.5 rounded font-bold flex items-center gap-1",
                           pResolved.kind === "phone" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                          pResolved.kind === "whatsapp" ? "bg-green-50 text-green-700 border border-green-200" :
-                          "bg-sky-50 text-sky-700 border border-sky-200"
+                            pResolved.kind === "whatsapp" ? "bg-green-50 text-green-700 border border-green-200" :
+                              "bg-sky-50 text-sky-700 border border-sky-200"
                         )}>
                           {pResolved.kind === "phone" ? <Phone size={9} /> : pResolved.kind === "whatsapp" ? <MessageCircle size={9} /> : <ExternalLink size={9} />}
                           {pResolved.kind === "phone" ? `Call (${pResolved.href})` : pResolved.kind === "whatsapp" ? "WhatsApp" : "Web Link"}
@@ -479,8 +521,8 @@ export default function EditHeroModal({ hero, onSave, trigger, disabled = false 
                         <span className={cn(
                           "text-[9px] px-1.5 py-0.5 rounded font-bold flex items-center gap-1",
                           sResolved.kind === "phone" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                          sResolved.kind === "whatsapp" ? "bg-green-50 text-green-700 border border-green-200" :
-                          "bg-sky-50 text-sky-700 border border-sky-200"
+                            sResolved.kind === "whatsapp" ? "bg-green-50 text-green-700 border border-green-200" :
+                              "bg-sky-50 text-sky-700 border border-sky-200"
                         )}>
                           {sResolved.kind === "phone" ? <Phone size={9} /> : sResolved.kind === "whatsapp" ? <MessageCircle size={9} /> : <ExternalLink size={9} />}
                           {sResolved.kind === "phone" ? `Call (${sResolved.href})` : sResolved.kind === "whatsapp" ? "WhatsApp" : "Web Link"}

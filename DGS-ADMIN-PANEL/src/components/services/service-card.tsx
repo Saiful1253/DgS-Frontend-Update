@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Service, ServiceGroup } from "@/types/service";
+import { Service } from "@/types/service";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -13,12 +13,12 @@ import {
   Trash2,
   Layers,
   Tag,
-  GripVertical,
   Check,
   Columns,
   Calendar,
+  Star,
 } from "lucide-react";
-import { toggleServiceActive, saveService } from "@/services/service/service.service";
+import { toggleServiceActive, toggleServiceFlagship } from "@/services/service/service.service";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import DeleteServiceDialog from "./modals/service/delete-service-dialog";
@@ -26,49 +26,101 @@ import EditServiceModal from "./modals/service/edit-service-modal";
 import ServiceDetailsModal from "./modals/service/service-details-modal";
 import { cn } from "@/lib/utils";
 
+import { CategoryOptionSource } from "@/lib/service-categories";
+
+function stripHtmlTags(html?: string | null): string {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 interface Props {
   service: Service;
-  groups: ServiceGroup[];
-  /** dnd-kit sortable props for the card root. */
-  rootProps?: Record<string, unknown>;
-  /** dnd-kit listeners for the grip only, so the card stays clickable. */
-  dragHandleProps?: Record<string, unknown>;
-  onQuickOrderUpdate?: (serviceId: number, newOrder: number) => void;
+  categories?: CategoryOptionSource[];
+  featuredCount?: number;
+  onFlagshipSwitched?: (featuredId: number) => void;
+  onServiceUpdated?: (updated: Service) => void;
   onDeleted?: (serviceId: number) => Promise<void> | void;
-  isDragging?: boolean;
-  isTarget?: boolean;
+  onOpenManageCategories?: () => void;
+  onCategoriesUpdated?: (newCategories: CategoryOptionSource[]) => void;
 }
 
 export default function ServiceCard({
   service,
-  groups,
-  rootProps,
-  dragHandleProps,
-  onQuickOrderUpdate,
+  categories,
+  featuredCount,
+  onFlagshipSwitched,
+  onServiceUpdated,
   onDeleted,
-  isDragging = false,
-  isTarget = false,
+  onOpenManageCategories,
+  onCategoriesUpdated,
 }: Props) {
   const router = useRouter();
+  const [currentService, setCurrentService] = useState<Service>(service);
   const [isActive, setIsActive] = useState(service.is_active);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  // Manual display order state
-  const [manualOrder, setManualOrder] = useState<string>(String(service.display_order ?? 0));
-  const [isEditingOrder, setIsEditingOrder] = useState(false);
-  const [savingOrder, setSavingOrder] = useState(false);
+  const [isFlagship, setIsFlagship] = useState(Boolean(service.is_flagship));
+  const [updatingFlagship, setUpdatingFlagship] = useState(false);
 
   useEffect(() => {
-    setManualOrder(String(service.display_order ?? 0));
-  }, [service.display_order]);
+    setCurrentService(service);
+    setIsActive(service.is_active);
+    setIsFlagship(Boolean(service.is_flagship));
+  }, [service]);
 
-  const pillarName = service.pillarEntity?.display_label || service.pillar || "Software Development";
-  const formattedDate = service.created_at
-    ? new Date(service.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+  const categoryName = currentService.categoryEntity?.display_label || currentService.category || "General Engineering";
+  const formattedDate = currentService.created_at
+    ? new Date(currentService.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : null;
+
+  const handleToggleFlagship = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (updatingFlagship) return;
+    const nextVal = !isFlagship;
+
+    // Exactly one service must remain featured at a time
+    if (isFlagship && !nextVal) {
+      toast.error("At least one service must remain featured. Feature another service to switch.");
+      return;
+    }
+
+    setUpdatingFlagship(true);
+    setIsFlagship(nextVal);
+
+    const loadingToast = toast.loading("Setting as featured flagship...");
+    try {
+      const res = await toggleServiceFlagship(service.id, nextVal);
+
+      if (res.success) {
+        toast.success("Service featured as flagship (others unfeatured)", { id: loadingToast });
+        if (nextVal) {
+          setIsActive(true);
+        }
+        onFlagshipSwitched?.(service.id);
+        router.refresh();
+      } else {
+        setIsFlagship(!nextVal);
+        toast.error(res.message || "Failed to update featured status", { id: loadingToast });
+      }
+    } catch (err: any) {
+      setIsFlagship(!nextVal);
+      toast.error(err?.message || "At least one service must be featured", { id: loadingToast });
+    } finally {
+      setUpdatingFlagship(false);
+    }
+  };
 
   const handleToggleStatus = async (checked: boolean) => {
     if (updatingStatus) return;
@@ -91,91 +143,61 @@ export default function ServiceCard({
     }
   };
 
-  const handleSaveManualOrder = async () => {
-    const val = parseInt(manualOrder, 10);
-    if (isNaN(val) || val < 0) {
-      toast.error("Please enter a valid non-negative order number");
-      setManualOrder(String(service.display_order ?? 0));
-      setIsEditingOrder(false);
-      return;
-    }
-
-    if (val === service.display_order) {
-      setIsEditingOrder(false);
-      return;
-    }
-
-    if (onQuickOrderUpdate) {
-      onQuickOrderUpdate(service.id, val);
-      setIsEditingOrder(false);
-      return;
-    }
-
-    setSavingOrder(true);
-    try {
-      const res = await saveService({
-        ...service,
-        display_order: val,
-      });
-      if (res.success) {
-        toast.success(`Display order updated to ${val}`);
-        setIsEditingOrder(false);
-        router.refresh();
-      } else {
-        toast.error(res.message || "Failed to update order");
-      }
-    } catch {
-      toast.error("Failed to save order");
-    } finally {
-      setSavingOrder(false);
-    }
-  };
-
   return (
     <>
       <div
-        {...(rootProps ?? {})}
         onClick={() => setDetailsOpen(true)}
         title="Click to view service details"
-      className={cn(
-        "group relative flex flex-col justify-between rounded-xl border bg-white p-3.5 sm:p-5 shadow-xs transition-all duration-200 cursor-pointer h-full w-full overflow-hidden",
-        isDragging && "opacity-40 border-dashed border-[#00668a] scale-[0.98]",
-        isTarget && "border-2 border-[#00668a] bg-[#e6eff6]/30 shadow-md",
-        !isDragging && !isTarget && "border-slate-200 hover:border-[#00668a]/50 hover:shadow-md"
-      )}
-    >
-      <div>
-        <div className="flex items-start justify-between gap-2 min-w-0">
-          <div className="flex items-start gap-2 min-w-0 flex-1">
-            {dragHandleProps && (
-              <div
-                {...dragHandleProps}
-                title="Drag to reorder card"
-                onClick={(e) => e.stopPropagation()}
-                className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-slate-600 rounded transition-colors shrink-0 touch-none mt-0.5"
-              >
-                <GripVertical className="h-4 w-4" />
-              </div>
-            )}
-            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-[#e6eff6] text-[#00668a] overflow-hidden p-1">
-              {service.icon_url ? (
-                <img src={service.icon_url} alt={service.name} className="h-full w-full object-contain" />
-              ) : (
-                <Layers className="h-5 w-5" />
-              )}
+        className="group relative flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3.5 sm:p-5 shadow-xs hover:border-[#00668a]/50 hover:shadow-md transition-all duration-200 cursor-pointer h-full w-full overflow-hidden"
+      >
+        <div>
+          <div className="flex items-start justify-between gap-2 min-w-0">
+            <div className="flex items-start gap-2.5 min-w-0 flex-1">
+              <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-[#e6eff6] text-[#00668a] overflow-hidden p-0.5 relative">
+              {service.image_url || service.icon_url ? (
+                <img
+                  src={service.image_url || service.icon_url || ""}
+                  alt={service.name}
+                  className="h-full w-full object-cover rounded-md relative z-10 bg-[#e6eff6]"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : null}
+              <Layers className="h-5 w-5 absolute text-[#00668a]/60" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <h3 className="font-bold text-slate-900 text-xs sm:text-sm truncate max-w-[140px] sm:max-w-full" title={service.name}>{service.name}</h3>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 shrink-0">
-                  #{service.id}
-                </span>
+                {service.is_flagship && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                    ★ Flagship
+                  </span>
+                )}
               </div>
               <p className="text-[11px] sm:text-xs font-mono text-slate-400 truncate">/{service.slug}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 ml-1" onClick={(e) => e.stopPropagation()}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-7 w-7 sm:h-8 sm:w-8 transition-colors rounded-lg",
+                isFlagship
+                  ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50"
+                  : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              )}
+              disabled={updatingFlagship}
+              onClick={handleToggleFlagship}
+              aria-label={isFlagship ? "Remove flagship / unfeature" : "Mark as flagship / feature"}
+              title={isFlagship ? "Remove from flagship featured" : "Feature as flagship"}
+            >
+              <Star className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", isFlagship && "fill-amber-400 text-amber-500")} />
+            </Button>
+
             {(
               <div className="flex items-center mr-0.5" title={isActive ? "Active service" : "Inactive service"}>
                 <Switch
@@ -218,78 +240,35 @@ export default function ServiceCard({
           </div>
         </div>
 
-        {/* Taxonomy Badges: Pillar & Group */}
+        {/* Taxonomy Badges: Category & Badges */}
         <div className="mt-3 flex items-center gap-1.5 flex-wrap">
           <Badge
             variant="outline"
             className="text-[#00668a] bg-[#e6eff6] border-[#00668a]/30 font-semibold text-[11px] gap-1"
-            title="Service Pillar"
+            title="Service Category"
           >
             <Columns className="h-3 w-3 shrink-0" />
-            <span className="truncate">{pillarName}</span>
+            <span className="truncate">{categoryName}</span>
           </Badge>
-          {service.group ? (
-            <Badge
-              variant="secondary"
-              className="bg-slate-100 text-slate-700 font-semibold text-[11px] gap-1"
-              title="Service Group"
-            >
-              <Tag className="h-3 w-3 shrink-0" />
-              <span className="truncate">{service.group.name}</span>
+          {service.tier_label && (
+            <Badge variant="outline" className="text-slate-600 bg-slate-50 border-slate-200 text-[11px]">
+              {service.tier_label}
             </Badge>
-          ) : (
-            <Badge variant="outline" className="text-slate-400 border-dashed text-[11px]">
-              Ungrouped
+          )}
+          {service.badge_label && (
+            <Badge variant="outline" className="text-orange-700 bg-orange-50 border-orange-200 text-[11px]">
+              {service.badge_label}
             </Badge>
           )}
         </div>
-
         {/* Description Preview */}
         <p className="mt-2.5 text-xs text-slate-600 leading-relaxed line-clamp-2">
-          {service.description || "No description provided."}
+          {stripHtmlTags(service.description) || "No description provided."}
         </p>
       </div>
 
       <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
         <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
-          {/* Manual Order Adjustment Control */}
-          {(
-            isEditingOrder ? (
-              <div className="flex items-center gap-1">
-                <Input
-                  type="number"
-                  min={0}
-                  value={manualOrder}
-                  onChange={(e) => setManualOrder(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSaveManualOrder();
-                    if (e.key === "Escape") setIsEditingOrder(false);
-                  }}
-                  className="h-6 w-14 text-xs font-mono px-1.5 py-0 border-slate-300"
-                  autoFocus
-                />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={handleSaveManualOrder}
-                  disabled={savingOrder}
-                  className="h-6 w-6 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                  title="Save order"
-                >
-                  <Check className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsEditingOrder(true)}
-                title="Click to manually adjust display order"
-                className="text-[11px] font-medium text-slate-500 hover:text-[#00668a] bg-slate-50 hover:bg-[#e6eff6] px-1.5 py-0.5 rounded border border-slate-200 transition-colors"
-              >
-                Order: <span className="font-bold font-mono">{service.display_order}</span>
-              </button>
-            )
-          )}
 
           {/* Creation date */}
           {formattedDate && (
@@ -315,7 +294,7 @@ export default function ServiceCard({
     <ServiceDetailsModal
       open={detailsOpen}
       onOpenChange={setDetailsOpen}
-      service={service}
+      service={currentService}
       onEditClick={() => setEditOpen(true)}
       onDeleteClick={() => setDeleteOpen(true)}
     />
@@ -325,16 +304,23 @@ export default function ServiceCard({
         <EditServiceModal
           open={editOpen}
           onOpenChange={setEditOpen}
-          service={service}
-          groups={groups}
+          service={currentService}
+          categories={categories}
+          featuredCount={featuredCount}
+          onOpenManageCategories={onOpenManageCategories}
+          onCategoriesUpdated={onCategoriesUpdated}
+          onUpdated={(updated) => {
+            setCurrentService(updated);
+            onServiceUpdated?.(updated);
+          }}
           onDeleteRequest={() => setDeleteOpen(true)}
         />
         <DeleteServiceDialog
-          service={service}
+          service={currentService}
           open={deleteOpen}
           onOpenChange={setDeleteOpen}
           onDeleted={async () => {
-            await onDeleted?.(service.id);
+            await onDeleted?.(currentService.id);
           }}
         />
       </>

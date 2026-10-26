@@ -3,16 +3,14 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Service, ServiceGroup, PaginatedServices } from "@/types/service";
+import { Service, PaginatedServices } from "@/types/service";
 import { ServiceQueryParams, ServiceSortBy, buildServicePath } from "@/lib/query/service-query";
-import { toPillarOptions, type PillarOptionSource } from "@/lib/service-pillars";
-import { assignSlotOrders, toReorderPayload } from "@/lib/service-order";
+import { toCategoryOptions, type CategoryOptionSource } from "@/lib/service-categories";
 import type { ServiceStats } from "@/types/service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppPagination } from "@/components/common/app-pagination";
-import SortableGrid from "@/components/common/sortable-grid";
-import { listServices, reorderServices } from "@/services/service/service.service";
+import { listServices } from "@/services/service/service.service";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -23,16 +21,16 @@ import {
   XCircle,
   Tag,
   X,
+  Sparkles,
+  FolderKanban,
 } from "lucide-react";
 import ServiceCard from "./service-card";
 import CreateServiceModal from "./modals/service/create-service-modal";
-import EditGroupModal from "./modals/group/edit-group-modal";
-import DeleteGroupDialog from "./modals/group/delete-group-dialog";
+import ServiceCategoryModal from "./modals/service/service-category-modal";
 
 interface Props {
   initialServices: PaginatedServices;
-  initialGroups: ServiceGroup[];
-  pillars: PillarOptionSource[];
+  categories?: CategoryOptionSource[];
   initialStats: ServiceStats;
   query: ServiceQueryParams;
   filtersActive: boolean;
@@ -41,19 +39,26 @@ interface Props {
 
 export default function ServicesManager({
   initialServices,
-  initialGroups,
-  pillars,
+  categories,
   initialStats,
   query,
   pageSizeOptions,
 }: Props) {
   const router = useRouter();
 
-  // Local Services State for optimistic drag-and-drop & ordering updates
   const [servicesList, setServicesList] = useState<Service[]>(initialServices.data || []);
   const [totalCount, setTotalCount] = useState<number>(initialServices.total ?? 0);
   const [totalPagesCount, setTotalPagesCount] = useState<number>(initialServices.totalPages ?? 1);
-  const [reordering, setReordering] = useState(false);
+
+  // Category Directory State
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [localCategories, setLocalCategories] = useState<CategoryOptionSource[]>(categories || []);
+
+  useEffect(() => {
+    if (categories) {
+      setLocalCategories(categories);
+    }
+  }, [categories]);
 
   useEffect(() => {
     setServicesList(initialServices.data || []);
@@ -85,52 +90,67 @@ export default function ServicesManager({
     router.refresh();
   };
 
+  const featuredCount = useMemo(
+    () => servicesList.filter((s) => s.is_flagship && !s.is_deleted).length,
+    [servicesList]
+  );
+
+  const handleFlagshipSwitched = (featuredId: number) => {
+    setServicesList((prev) =>
+      prev.map((item) => ({
+        ...item,
+        is_flagship: item.id === featuredId,
+        is_active: item.id === featuredId ? true : item.is_active,
+      }))
+    );
+    router.refresh();
+  };
+
+  const handleServiceUpdated = (updated: Service) => {
+    setServicesList((prev) =>
+      prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
+    );
+    router.refresh();
+  };
+
   // Search & Filter Draft States
   const [searchDraft, setSearchDraft] = useState(query.search ?? "");
-  const [pillarDraft, setPillarDraft] = useState<string>(query.pillar ?? "all");
-  const [groupDraft, setGroupDraft] = useState<string>(query.group_id ? String(query.group_id) : "all");
+  const [categoryDraft, setCategoryDraft] = useState<string>(query.category ?? "all");
   const [statusDraft, setStatusDraft] = useState<"all" | "active" | "inactive">(query.status || "all");
-  const [sortDraft, setSortDraft] = useState<ServiceSortBy>(query.sortBy ?? "display_order");
-  const [orderDraft, setOrderDraft] = useState<"asc" | "desc">(query.sortOrder ?? "asc");
+  const [sortDraft, setSortDraft] = useState<ServiceSortBy>(query.sortBy ?? "created_at");
+  const [orderDraft, setOrderDraft] = useState<"asc" | "desc">(query.sortOrder ?? "desc");
 
-  // Applied Filters State (matching Blog & Portfolio Manager pattern)
+  // Applied Filters State
   const [appliedFilters, setAppliedFilters] = useState({
     search: query.search ?? "",
-    pillar: query.pillar ?? "all",
-    group: query.group_id ? String(query.group_id) : "all",
+    category: query.category ?? "all",
     status: query.status || "all",
-    sortBy: query.sortBy ?? "display_order",
-    sortOrder: query.sortOrder ?? "asc",
+    sortBy: query.sortBy ?? "created_at",
+    sortOrder: query.sortOrder ?? "desc",
   });
 
   const [addServiceOpen, setAddServiceOpen] = useState(false);
-  const [editGroupOpen, setEditGroupOpen] = useState(false);
-  const [deleteGroupOpen, setDeleteGroupOpen] = useState(false);
-  const [selectedGroup] = useState<ServiceGroup | null>(null);
 
   // Filter pending check
   const isFilterPending =
     searchDraft.trim() !== appliedFilters.search ||
-    pillarDraft !== appliedFilters.pillar ||
-    groupDraft !== appliedFilters.group ||
+    categoryDraft !== appliedFilters.category ||
     statusDraft !== appliedFilters.status ||
     sortDraft !== appliedFilters.sortBy ||
     orderDraft !== appliedFilters.sortOrder;
 
   const hasActiveFilters = Boolean(
     appliedFilters.search ||
-    appliedFilters.pillar !== "all" ||
-    appliedFilters.group !== "all" ||
+    appliedFilters.category !== "all" ||
     appliedFilters.status !== "all" ||
-    appliedFilters.sortBy !== "display_order" ||
-    appliedFilters.sortOrder !== "asc"
+    appliedFilters.sortBy !== "created_at" ||
+    appliedFilters.sortOrder !== "desc"
   );
 
   const handleApplyFilters = () => {
     setAppliedFilters({
       search: searchDraft.trim(),
-      pillar: pillarDraft,
-      group: groupDraft,
+      category: categoryDraft,
       status: statusDraft,
       sortBy: sortDraft,
       sortOrder: orderDraft,
@@ -138,11 +158,10 @@ export default function ServicesManager({
 
     const sp = new URLSearchParams();
     if (searchDraft.trim()) sp.set("search", searchDraft.trim());
-    if (pillarDraft !== "all") sp.set("pillar", pillarDraft);
-    if (groupDraft !== "all") sp.set("group_id", groupDraft);
+    if (categoryDraft !== "all") sp.set("category", categoryDraft);
     if (statusDraft !== "all") sp.set("status", statusDraft);
-    if (sortDraft !== "display_order") sp.set("sortBy", sortDraft);
-    if (orderDraft !== "asc") sp.set("sortOrder", orderDraft);
+    if (sortDraft !== "created_at") sp.set("sortBy", sortDraft);
+    if (orderDraft !== "desc") sp.set("sortOrder", orderDraft);
 
     const qs = sp.toString();
     router.replace(qs ? `/services?${qs}` : "/services", { scroll: false });
@@ -150,36 +169,25 @@ export default function ServicesManager({
 
   const handleClearFilters = () => {
     setSearchDraft("");
-    setPillarDraft("all");
-    setGroupDraft("all");
+    setCategoryDraft("all");
     setStatusDraft("all");
-    setSortDraft("display_order");
-    setOrderDraft("asc");
+    setSortDraft("created_at");
+    setOrderDraft("desc");
     setAppliedFilters({
       search: "",
-      pillar: "all",
-      group: "all",
+      category: "all",
       status: "all",
-      sortBy: "display_order",
-      sortOrder: "asc",
+      sortBy: "created_at",
+      sortOrder: "desc",
     });
     router.replace("/services", { scroll: false });
   };
 
-  // Filter services dynamically by active tab & applied filters
+  // Filter services dynamically by active category & applied filters
   const filteredServices = useMemo(() => {
     return servicesList.filter((s) => {
-      // Pillar filter
-      if (appliedFilters.pillar !== "all" && s.pillar !== appliedFilters.pillar) return false;
-
-      // Group dropdown filter
-      if (appliedFilters.group !== "all") {
-        if (appliedFilters.group === "ungrouped") {
-          if (s.group_id != null) return false;
-        } else if (String(s.group_id) !== appliedFilters.group) {
-          return false;
-        }
-      }
+      // Category filter
+      if (appliedFilters.category !== "all" && s.category !== appliedFilters.category) return false;
 
       // Status filter
       if (appliedFilters.status === "active" && !s.is_active) return false;
@@ -191,8 +199,7 @@ export default function ServicesManager({
         const matchesName = (s.name || "").toLowerCase().includes(q);
         const matchesDesc = (s.description || "").toLowerCase().includes(q);
         const matchesSlug = (s.slug || "").toLowerCase().includes(q);
-        const matchesGroup = (s.group?.name || "").toLowerCase().includes(q);
-        if (!matchesName && !matchesDesc && !matchesSlug && !matchesGroup) return false;
+        if (!matchesName && !matchesDesc && !matchesSlug) return false;
       }
 
       return true;
@@ -207,87 +214,18 @@ export default function ServicesManager({
 
     return list.sort((a, b) => {
       let comp = 0;
-      if (key === "display_order") {
-        comp = (a.display_order ?? 0) - (b.display_order ?? 0);
-      } else if (key === "name") {
+      if (key === "name") {
         comp = (a.name || "").localeCompare(b.name || "");
-      } else if (key === "pillar") {
-        comp = (a.pillar || "").localeCompare(b.pillar || "");
-      } else if (key === "created_at") {
+      } else if (key === "category") {
+        comp = (a.category || "").localeCompare(b.category || "");
+      } else {
         comp = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
       }
       return isAsc ? comp : -comp;
     });
   }, [filteredServices, appliedFilters.sortBy, appliedFilters.sortOrder]);
 
-  const groups = initialGroups;
-  const pillarOptions = toPillarOptions(pillars);
-
-  // Filter groups dropdown based on selected pillar filter
-  const availableGroups = useMemo(() => {
-    if (appliedFilters.pillar === "all") return groups;
-    return groups.filter((g) => g.pillar === appliedFilters.pillar);
-  }, [groups, appliedFilters.pillar]);
-
-  // Drag and drop for service cards — dnd-kit reports the final order;
-  // persistence mirrors the old native-DnD path.
-  const handleReorder = async (newList: Service[]) => {
-    // Reuse the display_order values this page already owns instead of
-    // renumbering from 0 — see lib/service-order.ts for why page-local
-    // `index * 10` collides with rows on the other pages.
-    const updatedList = assignSlotOrders(servicesList, newList);
-
-    setServicesList(updatedList);
-
-    // Commit reorder to backend
-    if (!reordering) {
-      setReordering(true);
-      const payload = toReorderPayload(updatedList);
-
-      const loadingToast = toast.loading("Saving new service card order...");
-      try {
-        const res = await reorderServices(payload);
-        if (res.success) {
-          toast.success(res.message || "Service order updated successfully", { id: loadingToast });
-          router.refresh();
-        } else {
-          toast.error(res.message || "Failed to reorder services", { id: loadingToast });
-        }
-      } catch {
-        toast.error("Failed to persist service order", { id: loadingToast });
-      } finally {
-        setReordering(false);
-      }
-    }
-  };
-
-  // Quick manual order update from card badge
-  const handleQuickOrderUpdate = async (serviceId: number, newOrder: number) => {
-    const updatedList = servicesList.map((s) =>
-      s.id === serviceId ? { ...s, display_order: newOrder } : s
-    );
-    setServicesList(updatedList);
-
-    {
-      // Only the edited row is sent: the rest of the page already holds the
-      // value it wants, and rewriting them all would push page-local orders
-      // onto rows the admin never touched.
-      const payload = [{ id: serviceId, display_order: newOrder }];
-
-      const loadingToast = toast.loading("Updating service display order...");
-      try {
-        const res = await reorderServices(payload);
-        if (res.success) {
-          toast.success(`Updated order to ${newOrder}`, { id: loadingToast });
-          router.refresh();
-        } else {
-          toast.error(res.message || "Failed to update order", { id: loadingToast });
-        }
-      } catch {
-        toast.error("Failed to update display order", { id: loadingToast });
-      }
-    }
-  };
+  const categoryOptions = toCategoryOptions(localCategories);
 
   return (
     <div className="space-y-6 pb-12">
@@ -300,21 +238,29 @@ export default function ServicesManager({
             <span className="truncate">MODULE 6: SERVICES MANAGER</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight break-words">
-            Services Taxonomy & Pillar Manager
+            Services Taxonomy & Category Manager
           </h1>
         </div>
 
-        {(
-          <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
-            <Button
-              onClick={() => setAddServiceOpen(true)}
-              className="h-10 px-4 w-full sm:w-auto bg-[#00668a] hover:bg-[#004c69] text-white text-xs font-bold gap-1.5 shadow-xs transition-all flex items-center justify-center rounded-lg"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Service</span>
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setCategoryModalOpen(true)}
+            className="h-10 px-3.5 rounded-lg text-xs font-semibold text-slate-700 border-slate-200 hover:border-[#00668a]/40 hover:text-[#00668a] gap-1.5 shadow-2xs shrink-0 whitespace-nowrap"
+            title="Manage service categories"
+          >
+            <FolderKanban className="w-3.5 h-3.5 text-[#00668a]" />
+            <span>Manage Categories</span>
+          </Button>
+          <Button
+            onClick={() => setAddServiceOpen(true)}
+            className="h-10 px-4 w-full sm:w-auto bg-[#00668a] hover:bg-[#004c69] text-white text-xs font-bold gap-1.5 shadow-xs transition-all flex items-center justify-center rounded-lg"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Service</span>
+          </Button>
+        </div>
       </div>
 
       {/* 3. Stat Cards */}
@@ -351,11 +297,13 @@ export default function ServicesManager({
 
         <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Service Groups</p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">{initialStats.totalGroups}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Flagship Specials</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-[#f95700] mt-1">
+              {servicesList.filter((s) => s.is_flagship).length}
+            </p>
           </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-            <Tag className="h-5 w-5" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 text-[#f95700]">
+            <Sparkles className="h-5 w-5" />
           </div>
         </div>
       </div>
@@ -363,17 +311,16 @@ export default function ServicesManager({
       {/* 5. Filter & Search Controls (Matching Blog Manager Design) */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-end gap-3 flex-wrap">
-          {/* Pillar Filter */}
-          <div className="w-full sm:w-44 shrink-0 space-y-1.5">
+          {/* Category Filter */}
+          <div className="w-full sm:w-60 shrink-0 space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center h-4">
-              Pillar Filter :
+              Category Filter :
             </label>
             <div className="relative">
               <select
-                value={pillarDraft}
+                value={categoryDraft}
                 onChange={(e) => {
-                  setPillarDraft(e.target.value);
-                  setGroupDraft("all");
+                  setCategoryDraft(e.target.value);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -383,43 +330,10 @@ export default function ServicesManager({
                 }}
                 className="w-full h-10 pl-3 pr-8 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs appearance-none focus:outline-hidden focus:ring-2 focus:ring-[#00668a]/20 focus:border-[#00668a] transition-all cursor-pointer truncate"
               >
-                <option value="all">All Pillars</option>
-                {pillarOptions.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="m6 9 6 6 6-6" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {/* Service Group Dropdown */}
-          <div className="w-full sm:w-48 shrink-0 space-y-1.5">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center h-4">
-              Service Group :
-            </label>
-            <div className="relative">
-              <select
-                value={groupDraft}
-                onChange={(e) => setGroupDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleApplyFilters();
-                  }
-                }}
-                className="w-full h-10 pl-3 pr-8 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs appearance-none focus:outline-hidden focus:ring-2 focus:ring-[#00668a]/20 focus:border-[#00668a] transition-all cursor-pointer truncate"
-              >
-                <option value="all">All Service Groups</option>
-                <option value="ungrouped">Ungrouped Services</option>
-                {availableGroups.map((g) => (
-                  <option key={g.id} value={String(g.id)}>
-                    {g.name} ({g.pillar})
+                <option value="all">All Categories</option>
+                {categoryOptions.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
                   </option>
                 ))}
               </select>
@@ -478,10 +392,9 @@ export default function ServicesManager({
                   }}
                   className="w-full h-10 pl-3 pr-8 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs appearance-none focus:outline-hidden focus:ring-2 focus:ring-[#00668a]/20 focus:border-[#00668a] transition-all cursor-pointer truncate"
                 >
-                  <option value="display_order">Display Order</option>
-                  <option value="name">Service Name</option>
-                  <option value="pillar">Pillar</option>
                   <option value="created_at">Creation Date</option>
+                  <option value="name">Service Name</option>
+                  <option value="category">Category</option>
                 </select>
                 <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -560,6 +473,17 @@ export default function ServicesManager({
                   <span>Clear</span>
                 </Button>
               )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCategoryModalOpen(true)}
+                className="h-10 px-3.5 rounded-lg text-xs font-semibold text-slate-700 border-slate-200 hover:border-[#00668a]/40 hover:text-[#00668a] gap-1.5 shadow-2xs shrink-0 whitespace-nowrap"
+                title="Manage dynamic service categories"
+              >
+                <FolderKanban className="w-3.5 h-3.5 text-[#00668a]" />
+                <span>Categories</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -576,7 +500,7 @@ export default function ServicesManager({
           </h3>
           <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
             {hasActiveFilters
-              ? "Try adjusting your query, pillar tab, or group selection to view items."
+              ? "Try adjusting your search query or category filter to view items."
               : "Get started by creating your first service card."}
           </p>
           {hasActiveFilters && (
@@ -586,25 +510,24 @@ export default function ServicesManager({
           )}
         </div>
       ) : (
-        <SortableGrid
-          items={sortedServices}
-          getKey={(s) => s.id}
-          onReorder={handleReorder}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch"
-        >
-          {(s, { isDragging, isOver, rootProps, handleProps }) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+          {sortedServices.map((s) => (
             <ServiceCard
+              key={s.id}
               service={s}
-              groups={groups}
-              rootProps={rootProps}
-              dragHandleProps={handleProps}
-              onQuickOrderUpdate={handleQuickOrderUpdate}
+              categories={localCategories}
+              featuredCount={featuredCount}
+              onFlagshipSwitched={handleFlagshipSwitched}
+              onServiceUpdated={handleServiceUpdated}
+              onOpenManageCategories={() => setCategoryModalOpen(true)}
+              onCategoriesUpdated={(cats) => {
+                setLocalCategories(cats);
+                router.refresh();
+              }}
               onDeleted={handleServiceDeleted}
-              isDragging={isDragging}
-              isTarget={isOver}
             />
-          )}
-        </SortableGrid>
+          ))}
+        </div>
       )}
 
       {/* 7. Pagination Bar */}
@@ -627,21 +550,22 @@ export default function ServicesManager({
           <CreateServiceModal
             open={addServiceOpen}
             onOpenChange={setAddServiceOpen}
-            groups={groups}
-            pillars={pillars}
-            defaultPillar={pillarDraft !== "all" ? pillarDraft : pillarOptions[0]?.value}
+            categories={localCategories}
+            defaultCategory={categoryDraft !== "all" ? categoryDraft : categoryOptions[0]?.value}
+            onOpenManageCategories={() => setCategoryModalOpen(true)}
+            onCategoriesUpdated={(cats) => {
+              setLocalCategories(cats);
+              router.refresh();
+            }}
           />
-          <EditGroupModal
-            open={editGroupOpen}
-            onOpenChange={setEditGroupOpen}
-            group={selectedGroup}
-            pillars={pillars}
-            onDeleteRequest={() => setDeleteGroupOpen(true)}
-          />
-          <DeleteGroupDialog
-            open={deleteGroupOpen}
-            onOpenChange={setDeleteGroupOpen}
-            group={selectedGroup}
+          <ServiceCategoryModal
+            open={categoryModalOpen}
+            onOpenChange={setCategoryModalOpen}
+            categories={localCategories as any}
+            onCategoriesChange={(cats) => {
+              setLocalCategories(cats as any);
+              router.refresh();
+            }}
           />
         </>
       )}

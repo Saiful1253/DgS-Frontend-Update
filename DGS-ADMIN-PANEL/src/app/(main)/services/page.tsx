@@ -1,8 +1,7 @@
 import React from "react";
 import {
   getServicesResult,
-  getServiceGroupsResult,
-  getServicePillarsResult,
+  getServiceCategoriesResult,
   getServiceStatsResult,
 } from "@/services/service/service.service";
 import { parseServiceSearchParams, hasActiveServiceFilters } from "@/lib/query/service-query";
@@ -12,8 +11,8 @@ import LoadErrorPanel from "@/components/common/load-error-panel";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "Services Management | Milanova Technologies",
-  description: "Manage service items, active statuses, display orders, and icon attributes.",
+  title: "Services Management | DGS",
+  description: "Manage engineering service items, active statuses, categories, and technical attributes.",
 };
 
 const PAGE_SIZE_OPTIONS = [21, 45, 66];
@@ -23,26 +22,22 @@ export default async function ServicesPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-
   const query = parseServiceSearchParams((await searchParams) ?? {});
 
-  const [servicesResult, groupsResult, statsResult, pillarsResult] = await Promise.all([
+  const [servicesResult, statsResult, categoriesResult] = await Promise.all([
     getServicesResult(query),
-    getServiceGroupsResult(query.pillar),
     getServiceStatsResult(),
-    getServicePillarsResult(),
+    getServiceCategoriesResult(),
   ]);
 
   if (!servicesResult.ok) return <LoadErrorPanel message={servicesResult.message} />;
-  if (!groupsResult.ok) return <LoadErrorPanel message={groupsResult.message} />;
   if (!statsResult.ok) return <LoadErrorPanel message={statsResult.message} />;
-  if (!pillarsResult.ok) return <LoadErrorPanel message={pillarsResult.message} />;
+  if (!categoriesResult.ok) return <LoadErrorPanel message={categoriesResult.message} />;
 
   return (
     <ServicesManager
       initialServices={servicesResult.data}
-      initialGroups={groupsResult.data}
-      pillars={pillarsResult.data}
+      categories={categoriesResult.data}
       initialStats={statsResult.data}
       query={query}
       filtersActive={hasActiveServiceFilters(query)}

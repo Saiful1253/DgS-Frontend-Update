@@ -3,11 +3,14 @@ import { getHero } from "@/services/hero/hero.service";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getSiteConfig } from "@/services/site-config/site-config.service";
+import { getOfficeHubs } from "@/services/office-hub/office-hub.service";
 import Hero from "@/components/sections/hero/Hero";
 import BlogsSection from "@/components/sections/blogs/BlogsSection";
 import EngineeringServices from "@/components/sections/services/EngineeringServices";
 import WhyChooseSection from "@/components/sections/why-choose/WhyChooseSection";
 import LpgReticulationSection from "@/components/sections/reticulation-comparison/LpgReticulationSection";
+import AboutLeadershipSection from "@/components/sections/about-leadership/AboutLeadershipSection";
+import ContactInquirySection from "@/components/sections/contact-inquiry/ContactInquirySection";
 import type { HeroSection } from "@/types/cms/cms";
 import type { SiteConfig } from "@/types/settings";
 
@@ -38,7 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Page() {
-  const [activeHero, siteConfig, blogs] = await Promise.all([
+  const [activeHero, siteConfig, blogs, officeHubs] = await Promise.all([
     getHero().catch(() => null as HeroSection | null),
     getSiteConfig().catch(() => ({} as SiteConfig)),
     getBlogs({ page: 1, limit: 6 }).catch(() => ({
@@ -47,6 +50,7 @@ export default async function Page() {
       page: 1,
       limit: 6,
     }) as HomeBlogs),
+    getOfficeHubs().catch(() => []),
   ]);
 
   const anyConfig = siteConfig as SiteConfig & { official_emails?: { general?: string } };
@@ -82,6 +86,8 @@ export default async function Page() {
       <WhyChooseSection />
       {/* Figma 8:468 — SECTION 4: Why Choose Our LPG Reticulation System? */}
       <LpgReticulationSection />
+      {/* Figma 8:876 — SECTION 6: About Us & Leadership */}
+      <AboutLeadershipSection />
       <Suspense fallback={<div className="h-40 animate-pulse bg-slate-100" />}>
         <BlogsSection
           blogData={blogs}
@@ -90,6 +96,8 @@ export default async function Page() {
           filterParams={{ page: String(currentBlogPage) }}
         />
       </Suspense>
+      {/* Figma 2446:845 — SECTION 8: Contact, Full Inquiry Form & Interactive Map */}
+      <ContactInquirySection hubs={officeHubs} config={siteConfig} />
     </>
   );
 }

@@ -39,6 +39,10 @@ export const getPortfoliosResult = cache(async (params?: {
   category?: string;
   search?: string;
   featured?: boolean;
+  status?: string;
+  projectType?: string;
+  district?: string;
+  area?: string;
   page?: number;
   limit?: number;
 }): Promise<ReadResult<PortfolioItem[]>> => {

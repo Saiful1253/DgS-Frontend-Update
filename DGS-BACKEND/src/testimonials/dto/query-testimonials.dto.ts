@@ -9,18 +9,9 @@ import {
   Min,
 } from 'class-validator';
 
-/**
- * Coerce a query-string boolean ("true"/"false"/"1"/"0") to a real boolean.
- *
- * The global ValidationPipe runs with `enableImplicitConversion: true`, and
- * class-transformer 0.5.1 applies implicit conversion BEFORE `@Transform`
- * (TransformOperationExecutor.js:250 for type resolution, :91 for
- * `Boolean(value)`). Since `Boolean("false") === true`, reading `value` here
- * would hand us an already-inverted flag. `obj` is the untouched source
- * object, so read the original from it instead.
- */
-const toBool = ({ value, obj, key }: TransformFnParams): boolean => {
+const toBool = ({ value, obj, key }: TransformFnParams): boolean | undefined => {
   const raw = obj?.[key] ?? value;
+  if (raw === undefined || raw === null || raw === '') return undefined;
   return raw === true || raw === 'true' || raw === 1 || raw === '1';
 };
 
@@ -33,7 +24,20 @@ export class QueryTestimonialsDto {
   @IsOptional()
   @Transform(toBool)
   @IsBoolean()
+  is_featured?: boolean;
+
+  @IsOptional()
+  @Transform(toBool)
+  @IsBoolean()
   is_active?: boolean;
+
+  @IsOptional()
+  @IsString()
+  status?: string; // 'pending' | 'approved' | 'rejected' | 'all'
+
+  @IsOptional()
+  @IsString()
+  type?: string; // 'text' | 'image' | 'all'
 
   @IsOptional()
   @IsString()
@@ -44,6 +48,14 @@ export class QueryTestimonialsDto {
   @IsString()
   @MaxLength(120)
   search?: string;
+
+  @IsOptional()
+  @IsString()
+  sortBy?: string; // 'created_at' | 'rating' | 'author_name'
+
+  @IsOptional()
+  @IsString()
+  order?: 'asc' | 'desc' | 'ASC' | 'DESC';
 
   @IsOptional()
   @Type(() => Number)

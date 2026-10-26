@@ -8,7 +8,7 @@ import { Job } from '../careers/entities/job.entity';
 import { JobApplicant } from '../careers/entities/job-applicant.entity';
 import { Blog } from '../blogs/entities/blog.entity';
 import { Portfolio } from '../portfolio/entities/portfolio.entity';
-import { ProductSaas } from '../products-saas/entities/product-saas.entity';
+import { Service } from '../services/entities/service.entity';
 import { Testimonial } from '../testimonials/entities/testimonial.entity';
 import { Partner } from '../partners/entities/partner.entity';
 
@@ -21,7 +21,7 @@ import { Partner } from '../partners/entities/partner.entity';
       JobApplicant,
       Blog,
       Portfolio,
-      ProductSaas,
+      Service,
       Testimonial,
       Partner,
     ]),

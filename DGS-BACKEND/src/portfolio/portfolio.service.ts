@@ -35,6 +35,10 @@ export class PortfolioService {
     featuredOnly?: boolean,
     page?: number,
     limit?: number,
+    status?: string,
+    projectType?: string,
+    district?: string,
+    area?: string,
   ) {
     const qb = this.portfolioRepo.createQueryBuilder('p')
       .leftJoinAndSelect('p.challenges', 'c')
@@ -53,6 +57,22 @@ export class PortfolioService {
 
     if (search) {
       qb.andWhere('(p.project_name ILIKE :s OR p.primary_challenge ILIKE :s OR p.primary_solution ILIKE :s)', { s: `%${search}%` });
+    }
+
+    if (status) {
+      qb.andWhere('p.project_status = :status', { status });
+    }
+
+    if (projectType) {
+      qb.andWhere('p.project_type = :projectType', { projectType });
+    }
+
+    if (district) {
+      qb.andWhere('p.district ILIKE :district', { district: `%${district}%` });
+    }
+
+    if (area) {
+      qb.andWhere('p.area ILIKE :area', { area: `%${area}%` });
     }
 
     // Always return the paginated envelope (spec §7.4). This previously
@@ -101,7 +121,15 @@ export class PortfolioService {
    * searches client-side against the full set, so truncating here would make
    * an empty-looking tab indistinguishable from an exhausted one.
    */
-  async findAllPublic(category?: string, search?: string, featuredOnly = false) {
+  async findAllPublic(
+    category?: string,
+    search?: string,
+    featuredOnly = false,
+    page?: number,
+    limit?: number,
+    status?: string,
+    projectType?: string,
+  ) {
     const qb = this.portfolioRepo
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.challenges', 'c')
@@ -125,12 +153,27 @@ export class PortfolioService {
         `(p.project_name ILIKE :s
           OR p.primary_challenge ILIKE :s
           OR p.primary_solution ILIKE :s
+          OR p.description ILIKE :s
+          OR p.address ILIKE :s
           OR EXISTS (SELECT 1 FROM unnest(p.tags) AS tag WHERE tag ILIKE :s))`,
         { s: `%${search}%` },
       );
     }
 
-    const projects = await qb.getMany();
+    if (status) {
+      qb.andWhere('p.project_status = :status', { status });
+    }
+
+    if (projectType) {
+      qb.andWhere('p.project_type = :projectType', { projectType });
+    }
+
+    const currentPage = page ?? 1;
+    const currentLimit = limit ?? (featuredOnly ? 8 : 20);
+    const [projects, total] = await qb
+      .skip((currentPage - 1) * currentLimit)
+      .take(currentLimit)
+      .getManyAndCount();
 
     // portfolio_categories has no soft-delete column, so this is the full set.
     // `p.slug` is the column name on the alias `p`, not the entity property.
@@ -145,13 +188,53 @@ export class PortfolioService {
     // the public tab bar is never empty on a fresh install.
     return {
       projects,
+      data: projects,
       categories: categories.length > 0 ? categories : DEFAULT_CATEGORIES,
+      meta: {
+        total,
+        page: currentPage,
+        limit: currentLimit,
+        totalPages: Math.ceil(total / currentLimit),
+      },
     };
   }
 
   /** Public single-project read. Throws 404 for unpublished/unknown slugs. */
   async findOnePublic(slug: string) {
     return this.findBySlug(slug);
+  }
+
+  async getLocations() {
+    const locations = await this.portfolioRepo
+      .createQueryBuilder('p')
+      .select([
+        'p.id AS id',
+        'p.project_name AS project_name',
+        'p.slug AS slug',
+        'p.address AS address',
+        'p.latitude AS latitude',
+        'p.longitude AS longitude',
+        'p.project_status AS project_status',
+        'p.project_type AS project_type',
+        'p.is_featured AS is_featured',
+      ])
+      .where("p.address IS NOT NULL AND p.address <> ''")
+      .andWhere('p.latitude IS NOT NULL')
+      .andWhere('p.longitude IS NOT NULL')
+      .orderBy('p.created_at', 'DESC')
+      .getRawMany();
+
+    return locations.map((loc) => ({
+      id: Number(loc.id),
+      project_name: loc.project_name,
+      slug: loc.slug,
+      address: loc.address,
+      latitude: loc.latitude !== null ? Number(loc.latitude) : null,
+      longitude: loc.longitude !== null ? Number(loc.longitude) : null,
+      project_status: loc.project_status,
+      project_type: loc.project_type,
+      is_featured: loc.is_featured,
+    }));
   }
 
   /**

@@ -2,16 +2,21 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsEnum,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   MaxLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import {
   PortfolioChallengeDto,
   PortfolioPricingTierDto,
 } from './portfolio-challenge.dto';
+import { PortfolioMediaType, PortfolioProjectStatus, PortfolioProjectType } from '../entities/portfolio.entity';
 
 export class CreatePortfolioDto {
   @IsString()
@@ -62,6 +67,44 @@ export class CreatePortfolioDto {
   @IsOptional()
   @IsBoolean()
   is_featured?: boolean;
+
+  @IsOptional()
+  @IsEnum(PortfolioMediaType)
+  media_type?: PortfolioMediaType;
+
+  @IsOptional()
+  @ValidateIf((o) => o.media_type === PortfolioMediaType.YOUTUBE)
+  @IsNotEmpty()
+  @IsUrl({}, { message: 'Please provide a valid YouTube URL' })
+  @IsString()
+  @MaxLength(500)
+  media_url?: string;
+
+  @IsOptional()
+  @IsEnum(PortfolioProjectStatus)
+  project_status?: PortfolioProjectStatus;
+
+  @IsOptional()
+  @IsEnum(PortfolioProjectType)
+  project_type?: PortfolioProjectType;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  longitude?: number;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 
   @IsOptional()
   @IsString()

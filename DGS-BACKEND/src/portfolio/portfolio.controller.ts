@@ -42,12 +42,27 @@ export class PortfolioController {
     @Query('category') category?: string,
     @Query('search') search?: string,
     @Query('featured') featured?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Query('projectType') projectType?: string,
   ) {
     return this.portfolioService.findAllPublic(
       category,
       search,
       featured === 'true',
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+      status,
+      projectType,
     );
+  }
+
+  @Get('public/locations')
+  @Public()
+  @ApiOperation({ summary: 'Get portfolio locations with coordinates for public map' })
+  async getLocationsPublic() {
+    return this.portfolioService.getLocations();
   }
 
   /** Public single-project read for the `/portfolio/[slug]` case study page. */
@@ -58,10 +73,18 @@ export class PortfolioController {
     return this.portfolioService.findOnePublic(slug);
   }
 
+  @Get('locations')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get portfolio locations with coordinates' })
+  async getLocationsAdmin() {
+    return this.portfolioService.getLocations();
+  }
+
   @Get()
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'List all portfolio projects' })
+  @ApiOperation({ summary: 'List all portfolio projects' })
   async findAll(@Query() query: PortfolioQueryDto) {
     return this.portfolioService.findAll(
       query.category,
@@ -69,6 +92,10 @@ export class PortfolioController {
       query.featured === 'true',
       query.page,
       query.limit,
+      query.status,
+      (query as any).projectType || (query as any).project_type,
+      query.district,
+      query.area,
     );
   }
 

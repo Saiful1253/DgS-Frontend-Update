@@ -23,11 +23,26 @@ export class Testimonial {
   @Column({ type: 'varchar', length: 500, nullable: true })
   client_logo_url: string;
 
+  @Column({ type: 'varchar', length: 20, default: 'text' })
+  type: string; // 'text' | 'image'
+
+  @Column({ type: 'varchar', length: 512, nullable: true })
+  image_url: string;
+
+  @Column({ type: 'text', nullable: true })
+  image_public_id: string;
+
   @Column({ type: 'int', default: 5 })
   rating: number;
 
   @Column({ type: 'text', nullable: true })
   content: string;
+
+  @Column({ type: 'varchar', length: 20, default: 'approved' })
+  status: 'pending' | 'approved' | 'rejected';
+
+  @Column({ type: 'varchar', length: 20, default: 'admin' })
+  source: string; // 'admin' | 'storefront' | 'client'
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   source_platform: string; // Google | Facebook | Clutch | Upwork
@@ -49,4 +64,13 @@ export class Testimonial {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  // Compatibility getter/setter for customer_name
+  get customer_name(): string {
+    return this.author_name;
+  }
+
+  set customer_name(val: string) {
+    this.author_name = val;
+  }
 }

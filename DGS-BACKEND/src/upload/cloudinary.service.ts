@@ -11,6 +11,7 @@ export interface UploadResult {
   format: string;
   bytes: number;
   folder: string;
+  pages?: number;        // PDF page count; 1 for images
 }
 
 @Injectable()
@@ -32,31 +33,44 @@ export class CloudinaryService {
    * @param file       Multer file object (buffer in memory)
    * @param subfolder  e.g. 'products', 'blogs', 'hero'
    * @param publicId   Optional custom public_id (without extension)
+   * @param kind       'document' keeps the file as uploaded (PDFs); anything
+   *                   else runs the resize + webp image pipeline.
    */
   async uploadFile(
     file: Express.Multer.File,
     subfolder = 'products',
     publicId?: string,
+    kind: 'image' | 'document' = 'image',
   ): Promise<UploadResult> {
-    this.validateFile(file);
+    this.validateFile(file, kind);
 
     const folder = `${this.folder}/${subfolder}`;
+    // An image pipeline would convert the PDF to webp and cap it at 1200px,
+    // destroying the file. Documents skip it and keep their own format.
+    const isDocument = kind === 'document';
 
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder,
           public_id: publicId,
-          resource_type: 'image',
+          // Cloudinary infers the type for documents: a PDF lands as an
+          // image-type asset, which is what lets `pg_1` render page one as a
+          // thumbnail without a separate conversion.
+          resource_type: isDocument ? 'auto' : 'image',
           // Auto-detect format, convert to webp for smaller size
-          format: 'webp',
-          // Auto-optimize quality
-          quality: 'auto',
-          // Limit max dimensions
-          transformation: [
-            { width: 1200, height: 1200, crop: 'limit' },
-            { fetch_format: 'auto', quality: 'auto' },
-          ],
+          ...(isDocument
+            ? {}
+            : {
+                format: 'webp',
+                // Auto-optimize quality
+                quality: 'auto',
+                // Limit max dimensions
+                transformation: [
+                  { width: 1200, height: 1200, crop: 'limit' },
+                  { fetch_format: 'auto', quality: 'auto' },
+                ],
+              }),
           // Overwrite if same public_id
           overwrite: true,
           // Add tags for easy management in Cloudinary dashboard
@@ -65,7 +79,7 @@ export class CloudinaryService {
         (error, result: UploadApiResponse) => {
           if (error) {
             this.logger.error(`Cloudinary upload failed: ${error.message}`);
-            reject(new BadRequestException(`Image upload failed: ${error.message}`));
+            reject(new BadRequestException(`Upload failed: ${error.message}`));
           } else {
             resolve({
               url:       result.secure_url,
@@ -75,6 +89,7 @@ export class CloudinaryService {
               format:    result.format,
               bytes:     result.bytes,
               folder:    result.folder,
+              pages:     result.pages ?? 1,
             });
           }
         },
@@ -139,13 +154,19 @@ export class CloudinaryService {
   }
 
   // ── Validation ────────────────────────────────────────────
-  private validateFile(file: Express.Multer.File): void {
+  private validateFile(
+    file: Express.Multer.File,
+    kind: 'image' | 'document' = 'image',
+  ): void {
     const ALLOWED_MIME_TYPES = [
       'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
       'image/avif', 'image/svg+xml', 'image/tiff', 'image/bmp',
       'image/heic', 'image/heif', 'image/x-icon', 'image/vnd.microsoft.icon',
     ];
-    const MAX_FILE_SIZE_MB = 5;
+    // Certificates arrive as scans; 10MB covers a multi-page A4 PDF where the
+    // image allowance of 5MB would reject a perfectly normal licence.
+    const DOCUMENT_MIME_TYPES = ['application/pdf'];
+    const maxFileSizeMB = kind === 'document' ? 10 : 5;
 
     if (!file) throw new BadRequestException('No file provided');
 
@@ -156,24 +177,24 @@ export class CloudinaryService {
       );
     }
 
+    const allowed =
+      kind === 'document'
+        ? [...DOCUMENT_MIME_TYPES, ...ALLOWED_MIME_TYPES]
+        : ALLOWED_MIME_TYPES;
 
-    // if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-    //   throw new BadRequestException(
-    //     `Invalid file type: ${file.mimetype}. Allowed: JPEG, PNG, WebP, GIF`,
-    //   );
-    // }
-
-    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    if (!allowed.includes(file.mimetype)) {
       throw new BadRequestException(
-        `Invalid file type: ${file.mimetype}. Allowed: JPEG, PNG, WebP, GIF, AVIF, SVG, TIFF, BMP, HEIC, ICO`,
+        kind === 'document'
+          ? `Invalid file type: ${file.mimetype}. Allowed: PDF or a common image format`
+          : `Invalid file type: ${file.mimetype}. Allowed: JPEG, PNG, WebP, GIF, AVIF, SVG, TIFF, BMP, HEIC, ICO`,
       );
     }
 
 
-    const maxBytes = MAX_FILE_SIZE_MB * 1024 * 1024;
+    const maxBytes = maxFileSizeMB * 1024 * 1024;
     if (file.size > maxBytes) {
       throw new BadRequestException(
-        `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Max: ${MAX_FILE_SIZE_MB}MB`,
+        `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Max: ${maxFileSizeMB}MB`,
       );
     }
   }

@@ -27,7 +27,7 @@ export const blogSchema = z.object({
     .array(z.object({ name: z.string().trim().min(1, "co-author name required"), designation: z.string().trim().optional() }))
     .optional(),
   related_article_ids: z.array(z.number().int().positive()).optional(),
-  related_service_keys: z.array(z.string().trim().min(1)).optional(),
+  related_service_keys: z.array(z.string().trim().min(1)).optional().nullable(),
   canonical_url: z.string().trim().url("canonical URL must be valid").or(z.literal("")).optional(),
   no_index: z.boolean().optional(),
   no_follow: z.boolean().optional(),

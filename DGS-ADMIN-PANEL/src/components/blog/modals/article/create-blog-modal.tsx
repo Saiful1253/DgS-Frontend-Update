@@ -74,8 +74,10 @@ const MAX_DATA_SIZE = 10 * 1024 * 1024; // 10MB
 const toSlug = (val: string) =>
   val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-const toKey = (val: string) =>
-  val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+const toKey = (val?: string) => {
+  if (!val) return "";
+  return val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+};
 
 const stripHtml = (html?: string): string => {
   if (!html) return "";
@@ -1148,18 +1150,6 @@ export default function AddBlogModal({ onAddBlog, disabled = false }: AddBlogMod
                     countLabel="articles"
                     emptyText={loadingLists ? "Loading posts..." : "No published posts to link yet. Publish some articles first."}
                   />
-                  {relatedIds.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {relatedOptions.filter((p) => relatedIds.includes(Number(p.id))).map((p) => (
-                        <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 text-[11px] font-medium">
-                          {p.title}
-                          <button type="button" onClick={() => toggleRelated(Number(p.id))} className="hover:text-red-500" title="Remove related article">
-                            <X className="w-3 h-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* Related services */}
@@ -1167,29 +1157,23 @@ export default function AddBlogModal({ onAddBlog, disabled = false }: AddBlogMod
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-1">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                       <ListChecks className="w-3.5 h-3.5 text-primary" /> Related Services
+                      <span className="text-[10px] font-normal text-slate-400 normal-case">(Optional)</span>
                       <span className="text-[10px] font-medium text-slate-400 normal-case">({relatedKeys.length} selected)</span>
                     </span>
                   </div>
                   <OptionPicker
-                    options={serviceOptions.map((s) => ({ key: s.slug || toKey(s.name), label: s.name, hint: `${s.pillar} · ${s.slug || toKey(s.name)}` }))}
+                    options={serviceOptions.map((s: any) => {
+                      const label = s.name || s.label || s.value || "";
+                      const k = s.slug || toSlug(label) || (s.id ? String(s.id) : "");
+                      const pillar = s.pillar || "General";
+                      return { key: k, label, hint: `${pillar} · ${k}` };
+                    })}
                     selected={relatedKeys}
                     onToggle={toggleRelatedKey}
                     placeholder="Search services..."
                     countLabel="services"
                     emptyText={loadingLists ? "Loading services..." : "No services found."}
                   />
-                  {relatedKeys.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {relatedKeys.map((k) => (
-                        <span key={k} className="inline-flex items-center gap-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 text-[11px] font-medium">
-                          {k}
-                          <button type="button" onClick={() => setRelatedKeys((prev) => prev.filter((x) => x !== k))} className="hover:text-red-500" title="Remove service">
-                            <X className="w-3 h-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             )}

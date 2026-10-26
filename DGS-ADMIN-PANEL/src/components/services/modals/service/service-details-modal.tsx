@@ -39,7 +39,7 @@ export default function ServiceDetailsModal({
 }: ServiceDetailsModalProps) {
   if (!service) return null;
 
-  const pillarName = service.pillarEntity?.display_label || service.pillar || "Software Development";
+  const categoryName = service.categoryEntity?.display_label || service.category || "General Engineering";
   const createdDate = service.created_at ? new Date(service.created_at).toLocaleString() : "N/A";
   const updatedDate = service.updated_at ? new Date(service.updated_at).toLocaleString() : "N/A";
 
@@ -48,16 +48,18 @@ export default function ServiceDetailsModal({
       <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6">
         <DialogHeader className="space-y-3 pr-8 sm:pr-10">
           <div className="flex items-start gap-3 sm:gap-3.5">
-            <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-[#e6eff6] text-[#00668a] overflow-hidden p-1.5 shadow-2xs mt-0.5">
-              {service.icon_url ? (
+            <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-[#e6eff6] text-[#00668a] overflow-hidden p-1.5 shadow-2xs mt-0.5 relative">
+              {service.icon_url || service.image_url ? (
                 <img
-                  src={service.icon_url}
+                  src={service.icon_url || service.image_url || ""}
                   alt={service.name}
-                  className="h-full w-full object-contain"
+                  className="h-full w-full object-contain relative z-10 bg-[#e6eff6]"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
                 />
-              ) : (
-                <Layers className="h-6 w-6 sm:h-7 sm:w-7" />
-              )}
+              ) : null}
+              <Layers className="h-6 w-6 sm:h-7 sm:w-7 absolute text-[#00668a]/60" />
             </div>
 
             <div className="min-w-0 flex-1">
@@ -91,9 +93,10 @@ export default function ServiceDetailsModal({
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
               Full Description
             </span>
-            <div className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 p-3 sm:p-3.5 rounded-lg border border-slate-200/80 max-h-40 overflow-y-auto">
-              {service.description || "No description provided."}
-            </div>
+            <div 
+              className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 sm:p-3.5 rounded-lg border border-slate-200/80 max-h-40 overflow-y-auto prose prose-xs max-w-none"
+              dangerouslySetInnerHTML={{ __html: service.description || "No description provided." }}
+            />
           </div>
 
           {/* Service Media & Icon Asset Preview */}
@@ -129,7 +132,7 @@ export default function ServiceDetailsModal({
                   </a>
                 ) : (
                   <span className="text-xs text-slate-400 italic block mt-1">
-                    No icon uploaded — the client portal falls back to a generic pillar glyph
+                    No icon uploaded — the client portal falls back to a generic category icon
                   </span>
                 )}
               </div>
@@ -144,33 +147,9 @@ export default function ServiceDetailsModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200/80 text-xs">
               <div className="min-w-0">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Pillar
+                  Category
                 </span>
-                <span className="font-semibold text-slate-800 block truncate" title={pillarName}>{pillarName}</span>
-                {service.pillar_id && (
-                  <span className="text-[10px] font-mono text-slate-400">ID: #{service.pillar_id}</span>
-                )}
-              </div>
-
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Service Group
-                </span>
-                <span className="font-semibold text-slate-800 block truncate" title={service.group?.name || "None"}>
-                  {service.group?.name || "None"}
-                </span>
-                {service.group_id && (
-                  <span className="text-[10px] font-mono text-slate-400">ID: #{service.group_id}</span>
-                )}
-              </div>
-
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Display Order
-                </span>
-                <span className="font-mono font-semibold text-slate-800 block">
-                  {service.display_order}
-                </span>
+                <span className="font-semibold text-slate-800 block truncate" title={categoryName}>{categoryName}</span>
               </div>
 
               <div className="min-w-0">
@@ -181,28 +160,69 @@ export default function ServiceDetailsModal({
                   /{service.slug}
                 </span>
               </div>
-
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Created Date
-                </span>
-                <span className="text-slate-600 text-[11px] flex items-center gap-1 mt-0.5 flex-wrap">
-                  <Calendar className="h-3 w-3 text-slate-400 shrink-0" />
-                  <span className="truncate">{createdDate}</span>
-                </span>
-              </div>
-
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Last Updated
-                </span>
-                <span className="text-slate-600 text-[11px] flex items-center gap-1 mt-0.5 flex-wrap">
-                  <Clock className="h-3 w-3 text-slate-400 shrink-0" />
-                  <span className="truncate">{updatedDate}</span>
-                </span>
-              </div>
             </div>
           </div>
+
+          {/* DGS Engineering Specifications Block */}
+          {(service.badge_label || service.tier_label || service.features || service.compliance_codes) && (
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-700 block mb-1.5">
+                Engineering Specifications & Presentation
+              </span>
+              <div className="space-y-2 p-3.5 rounded-lg bg-sky-50/50 border border-sky-100 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {service.badge_label && (
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Badge Label</span>
+                      <span className="font-semibold text-orange-700">{service.badge_label}</span>
+                    </div>
+                  )}
+                  {service.tier_label && (
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Tier Level</span>
+                      <span className="font-semibold text-slate-700">{service.tier_label}</span>
+                    </div>
+                  )}
+                </div>
+
+                {service.compliance_codes && (
+                  <div className="pt-2 border-t border-sky-100/80">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Compliance Codes</span>
+                    <span className="text-slate-700 font-medium">{service.compliance_codes}</span>
+                  </div>
+                )}
+
+                {(() => {
+                  let list: any = service.features;
+                  if (typeof list === "string") {
+                    try {
+                      list = JSON.parse(list);
+                    } catch {
+                      list = [];
+                    }
+                  }
+                  if (!Array.isArray(list)) return null;
+                  const valid = list.filter(
+                    (f: any) => f && typeof f === "object" && !Array.isArray(f) && (f.title || f.description)
+                  );
+                  if (valid.length === 0) return null;
+                  return (
+                    <div className="pt-2 border-t border-sky-100/80">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Key Features</span>
+                      <ul className="list-disc list-inside space-y-0.5 text-slate-700">
+                        {valid.map((f: any, i: number) => (
+                          <li key={i}>
+                            <strong>{f.title || "Feature"}</strong>
+                            {f.description ? `: ${f.description}` : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-3 border-t border-slate-100">

@@ -37,42 +37,39 @@ export class ServicesController {
     return this.servicesService.findAllPublic();
   }
 
-  // Pillars Endpoints
-  @Get('pillars')
+  // Categories Endpoints (alias for pillars)
+  @Get(['categories', 'pillars'])
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'List all service pillars' })
-  async findPillars() {
+  @ApiOperation({ summary: 'List all service categories' })
+  async findCategories() {
     return this.servicesService.findPillars();
   }
 
-  @Post('pillars')
+  @Post(['categories', 'pillars'])
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Create service pillar' })
-  async createPillar(
+  @ApiOperation({ summary: 'Create service category' })
+  async createCategory(
     @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
     dto: CreateServicePillarDto,
   ) {
     return this.servicesService.createPillar(dto);
   }
 
-  // Declared before `pillars/:id` — Express matches in registration order, so a
-  // `:id` route above this one would swallow `/pillars/reorder` and ParseIntPipe
-  // would reject "reorder" with a 400.
-  @Patch('pillars/reorder')
+  @Patch(['categories/reorder', 'pillars/reorder'])
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Reorder service pillars' })
-  async reorderPillars(@Body() body: ReorderServicesDto) {
+  @ApiOperation({ summary: 'Reorder service categories' })
+  async reorderCategories(@Body() body: ReorderServicesDto) {
     return this.servicesService.reorderPillars(body.order);
   }
 
-  @Patch('pillars/:id')
+  @Patch(['categories/:id', 'pillars/:id'])
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Update service pillar' })
-  async updatePillar(
+  @ApiOperation({ summary: 'Update service category' })
+  async updateCategory(
     @Param('id', ParseIntPipe) id: number,
     @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
     dto: UpdateServicePillarDto,
@@ -80,11 +77,11 @@ export class ServicesController {
     return this.servicesService.updatePillar(id, dto);
   }
 
-  @Delete('pillars/:id')
+  @Delete(['categories/:id', 'pillars/:id'])
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Delete service pillar' })
-  async removePillar(@Param('id', ParseIntPipe) id: number) {
+  @ApiOperation({ summary: 'Delete service category' })
+  async removeCategory(@Param('id', ParseIntPipe) id: number) {
     return this.servicesService.removePillar(id);
   }
 

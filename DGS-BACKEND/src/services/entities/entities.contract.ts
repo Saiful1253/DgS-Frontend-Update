@@ -52,7 +52,7 @@ export type ServiceGroupContract = [
 ];
 
 export type ServiceContract = [
-  Assert<HasAll<Service, 'id' | 'name' | 'slug' | 'pillar' | 'display_order' | 'is_active' | 'is_deleted'>>,
+  Assert<HasAll<Service, 'id' | 'name' | 'slug' | 'pillar' | 'is_active' | 'is_deleted'>>,
   Assert<HasKey<Service, 'pillar_id'>>,
   Assert<HasKey<Service, 'group_id'>>,
   Assert<HasNone<Service, 'pillarId' | 'groupId'>>,

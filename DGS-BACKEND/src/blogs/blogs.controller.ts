@@ -39,7 +39,8 @@ export class BlogsController {
     @Query('category') category?: string,
     @Query('featured') featured?: string,
   ) {
-    return this.svc.findBlogs(+page, +limit, status, search, category, featured === 'true');
+    const isFeatured = featured !== undefined && featured !== '' ? featured === 'true' : undefined;
+    return this.svc.findBlogs(+page, +limit, status, search, category, isFeatured);
   }
 
   @Get(':id')

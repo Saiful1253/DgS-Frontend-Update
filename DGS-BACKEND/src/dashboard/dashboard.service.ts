@@ -7,7 +7,7 @@ import { Job } from '../careers/entities/job.entity';
 import { JobApplicant } from '../careers/entities/job-applicant.entity';
 import { Blog } from '../blogs/entities/blog.entity';
 import { Portfolio } from '../portfolio/entities/portfolio.entity';
-import { ProductSaas } from '../products-saas/entities/product-saas.entity';
+import { Service } from '../services/entities/service.entity';
 import { Testimonial } from '../testimonials/entities/testimonial.entity';
 import { Partner } from '../partners/entities/partner.entity';
 
@@ -20,7 +20,7 @@ export class DashboardService {
     @InjectRepository(JobApplicant) private applicantRepo: Repository<JobApplicant>,
     @InjectRepository(Blog) private blogRepo: Repository<Blog>,
     @InjectRepository(Portfolio) private portfolioRepo: Repository<Portfolio>,
-    @InjectRepository(ProductSaas) private productRepo: Repository<ProductSaas>,
+    @InjectRepository(Service) private serviceRepo: Repository<Service>,
     @InjectRepository(Testimonial) private testimonialRepo: Repository<Testimonial>,
     @InjectRepository(Partner) private partnerRepo: Repository<Partner>,
   ) {}
@@ -74,7 +74,7 @@ export class DashboardService {
         .createQueryBuilder('p')
         .where('p.created_at >= :d', { d: thirtyDaysAgo })
         .getCount(),
-      this.productRepo.count(),
+      this.serviceRepo.count({ where: { is_deleted: false } }),
       this.testimonialRepo.count({ where: { is_deleted: false } }),
       this.partnerRepo.count({ where: { is_deleted: false } }),
       this.userRepo.count({ where: { is_deleted: false } }),

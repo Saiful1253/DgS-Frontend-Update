@@ -3,6 +3,7 @@ export interface LanguageOption {
   name: string;
   enabled: boolean;
   isDefault: boolean;
+  [key: string]: any;
 }
 
 /**
@@ -13,6 +14,8 @@ export interface SiteConfig {
   company_name?: string;
   company_logo?: string;
   company_logo_public_id?: string;
+  site_favicon?: string;
+  site_favicon_public_id?: string;
   company_description?: string;
   company_short_description?: string;
   company_phone?: string;
@@ -22,12 +25,16 @@ export interface SiteConfig {
   facebook_url?: string;
   instagram_url?: string;
   twitter_url?: string;
+  linkedin_url?: string;
+  youtube_url?: string;
   footer_text?: string;
   copyright_year?: string;
   meta_description?: string;
   whatsapp_popup?: string;
   terms_and_conditions?: string;
   privacy_policy?: string;
+  company_latitude?: string;
+  company_longitude?: string;
   site_meta_title?: string;
   site_meta_description?: string;
   site_meta_keywords?: string;
@@ -40,4 +47,5 @@ export interface SiteConfig {
   emi_tenure_rates?: string;
   /** "true" hides CMS Hero, Reviews, Sales, and advanced settings routes globally. */
   hide_advanced_routes?: string;
+  [key: string]: any;
 }
