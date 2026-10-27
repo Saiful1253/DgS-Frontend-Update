@@ -13,13 +13,17 @@ export default function CompanyPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium mb-6">
             <Globe2 className="w-4 h-4" />
-            Italy Registered Digital Technology Agency
+            First Class Titas Gas Contractor · Bangladesh
           </div>
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent mb-6">
-            Bridging European Heritage & Global Engineering Excellence
+            Safe, Continuous Gas Supply — Engineered to Code
           </h1>
           <p className="text-lg md:text-xl text-slate-400 max-w-3xl leading-relaxed">
-            Born at the intersection of European design heritage and global engineering talent, we build enterprise-grade software and digital experiences. We bridge strategy, clean architecture, and modern tech stacks to turn complex business problems into elegant, reliable solutions.
+            Digital Gas Service designs, installs and commissions centralised LPG
+            reticulation, industrial utility pipelines and fire protection systems for
+            homes, restaurants, food courts and factories. Fifteen years of field work,
+            every project built to Titas Gas, Department of Explosives and BERC
+            requirements.
           </p>
         </div>
       </section>
@@ -33,7 +37,8 @@ export default function CompanyPage() {
             </div>
             <h3 className="text-xl font-bold text-white mb-3">Our Story</h3>
             <p className="text-slate-400 leading-relaxed">
-              Founded in Italy with global operating hubs, Milanova Technologies bridges high-end design aesthetics with robust software engineering for worldwide scale.
+              Fifteen years on gas infrastructure across Bangladesh — from household
+              reticulation lines to bulk storage and industrial utility networks.
             </p>
           </div>
 
@@ -43,7 +48,9 @@ export default function CompanyPage() {
             </div>
             <h3 className="text-xl font-bold text-white mb-3">Our Mission</h3>
             <p className="text-slate-400 leading-relaxed">
-              To build simple, scalable, and secure digital products that empower businesses to operate efficiently and grow without technical friction.
+              To give every kitchen and factory a continuous, metered and safely
+              monitored gas supply — without cylinder changes, stockouts or
+              improvised pipework.
             </p>
           </div>
 
@@ -53,7 +60,9 @@ export default function CompanyPage() {
             </div>
             <h3 className="text-xl font-bold text-white mb-3">Our Vision</h3>
             <p className="text-slate-400 leading-relaxed">
-              To be the most trusted cross-border technology partner, recognized globally for structural precision, user-centric simplicity, and engineering excellence.
+              To be Bangladesh&apos;s most trusted gas infrastructure partner, recognised
+              for engineering quality, regulatory discipline and projects that keep
+              running long after handover.
             </p>
           </div>
         </div>
@@ -62,42 +71,43 @@ export default function CompanyPage() {
       {/* Core Values & Why Choose Us */}
       <section id="why-choose-us" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-white mb-4">Core Values & Engineering Strengths</h2>
+          <h2 className="text-3xl font-bold text-white mb-4">Why Choose Digital Gas Service?</h2>
           <p className="text-slate-400 max-w-2xl mx-auto">
-            Why enterprise clients and fast-growing startups trust Milanova for mission-critical software & digital solutions.
+            100% safety guarantee, an experienced engineering team, first class Titas
+            Gas contractor status and 15+ years of field experience.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
             {
-              title: "EU-Compliant & Global Reach",
-              desc: "Headquartered in Italy for seamless European legal, financial, and compliance standards, backed by global execution capability.",
+              title: "100% Safety Guarantee",
+              desc: "Safety valves, leak detection and a dedicated gas bank designed into every installation — no improvised connections.",
               icon: Globe2,
             },
             {
-              title: "Full-Lifecycle Product Engineering",
-              desc: "From architectural consultation and UX design to full-stack development, cloud deployment, and automated CI/CD pipelines.",
+              title: "Experienced Engineering Team",
+              desc: "Gas reticulation, industrial piping and fire protection specialists who have commissioned projects for homes, restaurants, food courts and factories.",
               icon: Layers,
             },
             {
-              title: "AI & Low-Code Rescue Capabilities",
-              desc: "Specialized expertise in debugging, optimizing, and auditing non-dev or AI-generated code (Claude, Cursor, Bubble, FlutterFlow).",
+              title: "First Class Contractor of Titas Gas",
+              desc: "Officially recognised first class contractor — our work is accepted by Titas Gas without re-inspection.",
               icon: Cpu,
             },
             {
-              title: "Pragmatic Simplicity",
-              desc: "Clean architecture over unnecessary complexity. Maintainable, modular codebases designed for long-term viability.",
+              title: "15+ Years of Experience",
+              desc: "Fifteen years of field work across Bangladesh — we have seen how installations fail, and build so they do not.",
               icon: CheckCircle2,
             },
             {
-              title: "Radical Transparency",
-              desc: "No black boxes, zero hidden bottlenecks, open async communication with direct developer access.",
+              title: "Regulatory Paperwork Handled",
+              desc: "We prepare and submit the Department of Explosives, BERC and fire service paperwork so approvals do not hold up your construction.",
               icon: Users,
             },
             {
-              title: "Predictable European Quality",
-              desc: "Uncompromised standards in UI/UX design, GDPR compliance, rigorous code reviews, and automated security auditing.",
+              title: "Uninterrupted Supply, Predictable Billing",
+              desc: "Centralised manifolds and metered distribution keep the kitchen running — no cylinder swaps, no stockouts, no interrupted service.",
               icon: ShieldCheck,
             },
           ].map((item, idx) => (
@@ -113,10 +123,11 @@ export default function CompanyPage() {
       {/* Culture Section with 3D / Glassmorphism Visual Cards */}
       <section id="culture" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-16">
-          <span className="text-cyan-400 font-semibold text-sm tracking-wider uppercase">Our Culture</span>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-white mt-2 mb-4">Engineering Culture & Values</h2>
+          <span className="text-cyan-400 font-semibold text-sm tracking-wider uppercase">How We Work</span>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white mt-2 mb-4">From Site Survey to Handover</h2>
           <p className="text-slate-400 max-w-3xl mx-auto">
-            We bridge design precision with high-impact, full-stack engineering. Grounded in a culture of radical transparency, extreme ownership, and inclusive collaboration.
+            Every installation follows the same sequence — surveyed, designed to code,
+            pressure tested, and handed over with the certificates to prove it.
           </p>
         </div>
 
@@ -136,12 +147,13 @@ export default function CompanyPage() {
                 </div>
               </div>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Radical Transparency & Collaboration</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Site Survey & Design</h3>
             <p className="text-slate-400 text-sm leading-relaxed mb-4">
-              Open dashboards, live blueprint sketching, direct async communication channels, and clear architectural roadmaps.
+              We measure the site, calculate the load, and produce a pipeline layout you
+              can approve before anything is drilled.
             </p>
             <span className="inline-flex items-center text-xs font-semibold text-cyan-400">
-              No black boxes · Zero hidden bottlenecks
+              Load calculation · Layout drawing
             </span>
           </div>
 
@@ -164,12 +176,13 @@ export default function CompanyPage() {
                 </div>
               </div>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Diverse & Inclusive Global Teams</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Approvals & Installation</h3>
             <p className="text-slate-400 text-sm leading-relaxed mb-4">
-              Gender-balanced, multicultural perspectives from European headquarters and regional talent hubs driving tech innovation.
+              We prepare the regulatory submissions, then install the manifold, pipeline
+              and appliances with a safety valve and leak monitoring at every stage.
             </p>
             <span className="inline-flex items-center text-xs font-semibold text-blue-400">
-              Cross-border talent · Inclusive innovation
+              Approvals handled · Certified crew
             </span>
           </div>
 
@@ -189,12 +202,13 @@ export default function CompanyPage() {
                 </div>
               </div>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Extreme Ownership as Co-Architects</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Testing & Handover</h3>
             <p className="text-slate-400 text-sm leading-relaxed mb-4">
-              We don&apos;t just execute task tickets; we take responsibility for product outcome, scalability, and business viability.
+              Pressure testing, commissioning and a documented handover — plus the
+              certificates, so the system is verifiable for years to come.
             </p>
             <span className="inline-flex items-center text-xs font-semibold text-purple-400">
-              Co-architect mindset · Long-term viability
+              Pressure tested · Documented handover
             </span>
           </div>
         </div>
@@ -205,13 +219,13 @@ export default function CompanyPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <span className="text-cyan-400 font-semibold text-sm tracking-wider uppercase">Delivery Process</span>
-            <h2 className="text-3xl font-bold text-white mt-2 mb-6">How We Deliver Excellence</h2>
+            <h2 className="text-3xl font-bold text-white mt-2 mb-6">How We Deliver</h2>
             <div className="space-y-6">
               {[
-                { step: "01", name: "Discover & Align", text: "Business logic analysis, user journey mapping, and technical architecture planning." },
-                { step: "02", name: "Agile Engineering", text: "Sprint-based development with continuous integration and async demo updates." },
-                { step: "03", name: "QA & Security Audits", text: "Automated test suites, security patching, GDPR compliance checks, and code audits." },
-                { step: "04", name: "Deploy & Scale", text: "Smooth cloud deployment, production launch, documentation handover, and ongoing support." },
+                { step: "01", name: "Site Survey & Load Calculation", text: "Measured survey, gas load study, and an approved pipeline layout." },
+                { step: "02", name: "Design & Regulatory Approvals", text: "Engineering drawings plus Department of Explosives, BERC and fire service submissions." },
+                { step: "03", name: "Installation & Safety Systems", text: "Manifold, pipeline and appliances fitted with safety valves and leak monitoring." },
+                { step: "04", name: "Testing, Commissioning & Handover", text: "Pressure testing, appliance commissioning and documented handover with certificates." },
               ].map((p, idx) => (
                 <div key={idx} className="flex items-start gap-4">
                   <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center font-bold text-cyan-400 shrink-0">

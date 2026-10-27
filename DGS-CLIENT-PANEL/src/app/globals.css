@@ -7,6 +7,10 @@ html {
   scroll-behavior: smooth;
 }
 
+html[lang="bn"]:not(.i18n-ready) body {
+  visibility: hidden;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -33,13 +37,7 @@ html {
   --color-ring: var(--ring);
 
   --font-sans: var(--font-hanken-grotesk);
-  --font-space: var(--font-space-grotesk);
   --font-mono: var(--font-geist-mono);
-
-  /* Figma 8:400 faces (headings/metrics, body, eyebrow label). */
-  --font-jakarta: var(--font-plus-jakarta);
-  --font-inter: var(--font-inter-body);
-  --font-jetbrains: var(--font-jetbrains-mono);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);

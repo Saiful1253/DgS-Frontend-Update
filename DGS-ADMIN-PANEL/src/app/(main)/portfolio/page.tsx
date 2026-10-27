@@ -1,8 +1,6 @@
 import React from "react";
-import {
-  getPortfoliosResult,
-  getPortfolioCategoriesResult,
-} from "@/services/portfolio/portfolio.service";
+import { getPortfoliosResult } from "@/services/portfolio/portfolio.service";
+import { getServicesResult } from "@/services/service/service.service";
 import PortfolioManager from "@/components/portfolio/portfolio-manager";
 import LoadErrorPanel from "@/components/common/load-error-panel";
 
@@ -22,14 +20,11 @@ export default async function PortfolioPage({
   const shouldAutoOpen =
     resolvedParams?.action === "create" || resolvedParams?.create === "true";
 
-  const [portfoliosResult, categoriesResult] = await Promise.all([
+  const [portfoliosResult, servicesResult] = await Promise.all([
     getPortfoliosResult(),
-    getPortfolioCategoriesResult(),
+    getServicesResult({ limit: 100 }),
   ]);
 
-  // A failed fetch must not render as an empty grid. The previous
-  // `.catch(() => [])` made an API outage indistinguishable from "no case
-  // studies yet", which is how a broken integration could sit unnoticed.
   if (!portfoliosResult.ok) {
     return (
       <LoadErrorPanel
@@ -38,19 +33,21 @@ export default async function PortfolioPage({
       />
     );
   }
-  if (!categoriesResult.ok) {
-    return (
-      <LoadErrorPanel
-        message={categoriesResult.message}
-        subject="portfolio categories"
-      />
-    );
-  }
+
+  const rawServices = servicesResult.ok && servicesResult.data?.data ? servicesResult.data.data : [];
+  const serviceCategories =
+    Array.isArray(rawServices)
+      ? rawServices.map((s) => ({
+          id: s.id,
+          name: s.name,
+          slug: s.slug,
+        }))
+      : [];
 
   return (
     <PortfolioManager
       initialPortfolios={portfoliosResult.data}
-      initialCategories={categoriesResult.data.data}
+      initialCategories={serviceCategories}
       autoOpenCreate={shouldAutoOpen}
     />
   );

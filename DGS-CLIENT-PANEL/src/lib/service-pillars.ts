@@ -1,53 +1,43 @@
-export const SERVICE_PILLARS = [
-  "Software Development",
-  "Creative Services",
-  "Digital Marketing",
-  "Managed Services & Support",
-  "Data & Analytics",
-  "Growth & Conversion",
-  "Strategy & Consulting",
+export const SERVICE_CATEGORIES = [
+  "Central LPG Reticulation",
+  "AutoGas Plant & Pipeline",
+  "Industrial Gas Networks",
+  "Utility Gas (RMS & TBS)",
+  "Fire Hydrant & Safety Grids",
+  "Engineering & Reticulation Systems",
 ] as const;
+
+export const SERVICE_PILLARS = SERVICE_CATEGORIES;
 
 export type ServicePillar = (typeof SERVICE_PILLARS)[number];
 
-/**
- * SRS 2 tab labels. Presentation only - never persisted.
- *
- * The `service_pillars` table is the source of truth for names, ordering and
- * blurbs; this map only supplies short labels for filters and dropdowns that
- * render before pillar data has loaded.
- */
 export const SERVICE_PILLAR_LABELS: Record<
-  ServicePillar,
+  string,
   { tab: string; blurb: string }
 > = {
-  "Software Development": {
-    tab: "Software & Cloud",
-    blurb: "Engineering, AI, and cloud infrastructure for scalable operations.",
+  "Central LPG Reticulation": {
+    tab: "LPG Reticulation",
+    blurb: "Turnkey pipeline infrastructure for apartments, gated communities, and commercial kitchens.",
   },
-  "Creative Services": {
-    tab: "Creative & Post-Production",
-    blurb: "Retouching, motion, 3D, and brand systems for commercial output.",
+  "AutoGas Plant & Pipeline": {
+    tab: "AutoGas Plants",
+    blurb: "Refueling station engineering and bulk storage with Dept. of Explosives compliance.",
   },
-  "Digital Marketing": {
-    tab: "Marketing & Growth",
-    blurb: "Paid acquisition, search positioning, and content architecture.",
+  "Industrial Gas Networks": {
+    tab: "Industrial Piping",
+    blurb: "Heavy industrial gas pipelines for textile, ceramics, boilers, and captive energy.",
   },
-  "Managed Services & Support": {
-    tab: "Managed Services & Support",
-    blurb: "SLA-backed maintenance, monitoring, and dedicated delivery teams that keep systems healthy.",
+  "Utility Gas (RMS & TBS)": {
+    tab: "Utility Gas (RMS)",
+    blurb: "Titas Gas 1st Class protocol stations, governor calibration, and custody transfer.",
   },
-  "Data & Analytics": {
-    tab: "Data & Analytics",
-    blurb: "Measurement, attribution, and dashboards that turn raw events into confident decisions.",
+  "Fire Hydrant & Safety Grids": {
+    tab: "Fire Hydrant Grids",
+    blurb: "Statutory NFPA 20 deluge pump houses and fire service NOC clearance networks.",
   },
-  "Growth & Conversion": {
-    tab: "Growth & Conversion",
-    blurb: "Landing pages, experimentation, and lifecycle automation that turn traffic into revenue.",
-  },
-  "Strategy & Consulting": {
-    tab: "Strategy & Advisory",
-    blurb: "Discovery, audits, and roadmaps that de-risk investment before a line of code is written.",
+  "Engineering & Reticulation Systems": {
+    tab: "All Engineering Services",
+    blurb: "Complete turnkey gas engineering, industrial piping, and safety grid solutions.",
   },
 };
 

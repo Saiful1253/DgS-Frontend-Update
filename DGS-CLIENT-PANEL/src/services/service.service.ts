@@ -12,12 +12,10 @@
  * cannot disagree.
  */
 export { getPublicServices } from "@/services/service/service.service";
-export { getTechnologies } from "@/services/technology/technology.service";
 
 export type {
   PublicService,
   PublicServicePillar,
   PublicServiceGroup,
-  PublicTechnology,
   PublicServicesPayload,
 } from "@/types/service/service";

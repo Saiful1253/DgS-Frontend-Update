@@ -2,9 +2,18 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  X,
+  MapPin,
+  CheckCircle2,
+  Clock,
+  Navigation,
+} from "lucide-react";
 import { getPublicPortfolioBySlug } from "@/services/portfolio/portfolio.service";
-import type { PortfolioChallenge } from "@/types/portfolio/portfolio";
+import { BRAND } from "@/lib/brand";
+import { embedYouTubeVideos } from "@/lib/utils";
 
 export const revalidate = 3600;
 
@@ -13,12 +22,12 @@ type PageProps = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const project = await getPublicPortfolioBySlug(slug);
-  if (!project) return { title: "Case Study Not Found | MilanoVA Technologies" };
+  if (!project) return { title: `Project Not Found | ${BRAND.name}` };
 
   return {
-    title: `${project.project_name} Case Study | MilanoVA Technologies`,
+    title: `${project.project_name} | ${BRAND.name}`,
     description:
-      project.primary_challenge?.replace(/<[^>]*>/g, "").slice(0, 160) ??
+      toText(project.description).slice(0, 160) ||
       `Case study for ${project.project_name}.`,
   };
 }
@@ -37,55 +46,22 @@ function toText(html?: string | null): string {
     .trim();
 }
 
-/** SRS §4.3.2 — tab-wise media view over the challenge screenshots. */
-function ChallengeScreenshots({ challenges }: { challenges: PortfolioChallenge[] }) {
-  const withImages = challenges.filter((c) => c.supporting_image);
-  if (withImages.length === 0) return null;
-
-  return (
-    <section aria-labelledby="screens-heading" className="space-y-4">
-      <h2 id="screens-heading" className="text-2xl font-bold tracking-tight text-foreground">
-        Screens &amp; Diagrams
-      </h2>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {withImages.map((c) => (
-          <figure key={c.id} className="overflow-hidden rounded-2xl border border-border bg-card">
-            <div className="relative aspect-[16/10] bg-muted">
-              <Image
-                src={c.supporting_image as string}
-                alt={c.title}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
-              />
-            </div>
-            {c.title && (
-              <figcaption className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {c.title}
-              </figcaption>
-            )}
-          </figure>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export default async function PortfolioDetailPage({ params }: PageProps) {
   const { slug } = await params;
   const project = await getPublicPortfolioBySlug(slug);
 
   if (!project) notFound();
 
-  const challenges = [...(project.challenges ?? [])].sort(
-    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
-  );
+  const isCompleted = (project.project_status || "completed") === "completed";
+  const locationLabel = [project.address, project.area, project.district]
+    .filter(Boolean)
+    .join(", ");
+
+
   const tiers = [...(project.pricing_tiers ?? [])].sort(
     (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
   );
 
-  // SRS §4.3.3 — split each entry into bullet points for the standard-vs-ours
-  // comparison and the challenge list.
   const toPoints = (value?: string | null): string[] =>
     toText(value)
       .split(/\n|(?<=\.)\s+/)
@@ -93,7 +69,8 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
       .filter(Boolean);
 
   return (
-    <article className="mx-auto max-w-5xl px-4 py-12 md:px-10 md:py-16">
+    <article className="mx-auto max-w-5xl px-4 py-12 md:px-10 md:py-16 space-y-10">
+      {/* Back Link */}
       <Link
         href="/portfolio"
         className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-accent hover:underline"
@@ -102,38 +79,77 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
         Back to Portfolio
       </Link>
 
-      <header className="mt-8 space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
+      {/* Header Info */}
+      <header className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2.5">
           <span className="rounded-full bg-brand-accent/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-brand-accent">
-            {project.category}
+            {project.category || "Project"}
           </span>
+
+          <span
+            className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest flex items-center gap-1 text-white ${
+              isCompleted ? "bg-emerald-600" : "bg-sky-600"
+            }`}
+          >
+            {isCompleted ? (
+              <>
+                <CheckCircle2 className="w-3 h-3" />
+                <span>Completed</span>
+              </>
+            ) : (
+              <>
+                <Clock className="w-3 h-3" />
+                <span>Ongoing</span>
+              </>
+            )}
+          </span>
+
           {project.client_name && (
-            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              {project.client_name}
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground pl-1">
+              Client: {project.client_name}
             </span>
           )}
         </div>
 
-        <h1 className="text-4xl font-black tracking-tight text-foreground md:text-5xl">
+        <h1 className="text-3xl font-black tracking-tight text-foreground md:text-5xl">
           {project.project_name}
         </h1>
 
+        {locationLabel && (
+          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+            <MapPin className="w-4 h-4 text-brand-accent shrink-0" />
+            <span>{locationLabel}</span>
+            {project.latitude && project.longitude && (
+              <a
+                href={`https://www.google.com/maps?q=${project.latitude},${project.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-brand-accent hover:underline ml-2"
+              >
+                <Navigation className="w-3 h-3" />
+                <span>View Coordinates ({project.latitude}, {project.longitude})</span>
+              </a>
+            )}
+          </div>
+        )}
+
         {(project.tags ?? []).length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 pt-1">
             {(project.tags ?? []).map((tag) => (
               <span
                 key={tag}
                 className="rounded-full bg-muted px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
               >
-                {tag}
+                #{tag}
               </span>
             ))}
           </div>
         )}
       </header>
 
+      {/* Hero Media: High-Res Cover Visual */}
       {project.cover_image && (
-        <div className="relative mt-8 aspect-[21/9] overflow-hidden rounded-2xl bg-muted">
+        <div className="relative aspect-[21/9] overflow-hidden rounded-2xl bg-muted shadow-lg border border-border">
           <Image
             src={project.cover_image}
             alt={project.project_name}
@@ -145,117 +161,29 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Project URLs — SRS §4.3 header */}
-      {(project.live_url || project.app_store_url || project.play_store_url) && (
-        <div className="mt-6 flex flex-wrap gap-3">
-          {project.live_url && (
-            <a
-              href={project.live_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-button bg-brand-accent px-5 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-brand-accent-hover"
-            >
-              Live Demo
-              <ArrowRight className="h-4 w-4" />
-            </a>
-          )}
-          {project.app_store_url && (
-            <a
-              href={project.app_store_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-button border border-border px-5 py-3 text-xs font-bold uppercase tracking-wider text-foreground hover:border-brand-accent hover:text-brand-accent"
-            >
-              App Store
-            </a>
-          )}
-          {project.play_store_url && (
-            <a
-              href={project.play_store_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-button border border-border px-5 py-3 text-xs font-bold uppercase tracking-wider text-foreground hover:border-brand-accent hover:text-brand-accent"
-            >
-              Play Store
-            </a>
-          )}
-        </div>
-      )}
-
-      {/* 1. Primary challenge & solution — SRS §4.3.1 */}
-      {(project.primary_challenge || project.primary_solution) && (
-        <section className="mt-14 grid gap-8 md:grid-cols-2">
-          {project.primary_challenge && (
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h2 className="text-xs font-black uppercase tracking-widest text-brand-accent">
-                The Challenge
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {toText(project.primary_challenge)}
-              </p>
-            </div>
-          )}
-          {project.primary_solution && (
-            <div className="rounded-2xl border border-brand-accent/20 bg-brand-accent/5 p-6">
-              <h2 className="text-xs font-black uppercase tracking-widest text-brand-accent">
-                The Solution
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {toText(project.primary_solution)}
-              </p>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* 2. Tab-wise media view — SRS §4.3.2 */}
-      <div className="mt-14">
-        <ChallengeScreenshots challenges={challenges} />
-      </div>
-
-      {/* 3. Secondary challenges — SRS §4.3.3 */}
-      {challenges.length > 0 && (
-        <section aria-labelledby="challenges-heading" className="mt-14 space-y-6">
-          <h2 id="challenges-heading" className="text-2xl font-bold tracking-tight text-foreground">
-            Technical Challenges Solved
+      {/* Project Overview / Description */}
+      {project.description && (
+        <section aria-labelledby="overview-heading" className="space-y-4 pt-4 border-t border-border">
+          <h2 id="overview-heading" className="text-xl font-bold tracking-tight text-foreground">
+            Project Overview
           </h2>
-          {challenges.map((c, i) => (
-            <div
-              key={c.id}
-              className="rounded-2xl border border-border bg-card p-6"
-            >
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                Challenge {i + 1}
-              </p>
-              <h3 className="mt-1 text-lg font-bold text-foreground">
-                {c.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {toText(c.challenge_description)}
-              </p>
-              {c.solution_provided && (
-                <div className="mt-4 border-l-2 border-brand-accent pl-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-brand-accent">
-                    Solution
-                  </p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    {toText(c.solution_provided)}
-                  </p>
-                </div>
-              )}
-            </div>
-          ))}
+          <div
+            className="prose dark:prose-invert max-w-none text-sm text-muted-foreground leading-relaxed [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_iframe]:w-full [&_iframe]:aspect-video [&_iframe]:rounded-xl [&_iframe]:my-4 [&_iframe]:shadow-md [&_iframe]:border-0"
+            dangerouslySetInnerHTML={{ __html: embedYouTubeVideos(project.description) }}
+          />
         </section>
       )}
 
-      {/* 4. Benchmark comparison — SRS §4.3.4, conditional on the flag */}
+
+
+      {/* 4. Benchmark Comparison — SRS §4.3.4 */}
       {project.comparison_enabled && (
-        <section aria-labelledby="comparison-heading" className="mt-14 space-y-6">
+        <section aria-labelledby="comparison-heading" className="space-y-6 pt-4">
           <div>
             <h2 id="comparison-heading" className="text-2xl font-bold tracking-tight text-foreground">
               {project.comparison_title || "Industry Standard vs. Our Approach"}
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               How this engagement compares with a typical delivery of the same scope.
             </p>
           </div>
@@ -292,9 +220,9 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* 5. Pricing & engagement — SRS §4.3.5, conditional on the flag */}
+      {/* 5. Pricing & Engagement Options — SRS §4.3.5 */}
       {project.pricing_enabled && tiers.length > 0 && (
-        <section aria-labelledby="pricing-heading" className="mt-14 space-y-6">
+        <section aria-labelledby="pricing-heading" className="space-y-6 pt-4">
           <h2 id="pricing-heading" className="text-2xl font-bold tracking-tight text-foreground">
             {project.pricing_title || "Engagement Options"}
           </h2>

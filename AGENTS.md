@@ -1,9 +1,16 @@
 <!-- lean-ctx-rules -->
 <!-- version: 9 -->
 
-lean-ctx shadow mode: native read/search/shell calls auto-route to ctx_* — no tool-mapping needed.
-File editing → native Edit/StrReplace (lean-ctx only handles reads); if denied, use ctx_patch.
-Exclusive tools (no native trigger): ctx_compose (understand code, call first), ctx_search(action=symbol) (exact symbol), ctx_search(action=semantic) (by meaning), ctx_callgraph (callers), ctx_knowledge / ctx_session (memory).
+<!-- lean-ctx-mandate -->
+ANTIGRAVITY TOOL RULE: Native tools do NOT auto-route. You MUST explicitly call
+lean-ctx MCP tools (`call_mcp_tool` ServerName="lean-ctx") on EVERY interaction:
+- Read: `ctx_read` (mode=signatures/map/auto/diff; full only when editing). DO NOT use `view_file`.
+- Search: `ctx_search` (action=regex|symbol|semantic|text). DO NOT use `grep_search`.
+- Directory/files: `ctx_glob`, `ctx_tree`. DO NOT use `list_dir`.
+- Shell/terminal: `ctx_shell`. DO NOT use `run_command` unless interactive/daemon.
+- Architecture/context: `ctx_compose`, `ctx_overview`, `ctx_session`, `ctx_knowledge`.
+File editing → native replace_file_content/write_to_file (or ctx_patch).
+<!-- /lean-ctx-mandate -->
 <!-- lean-ctx-compression -->
 OUTPUT STYLE: expert-terse
 - Telegraph format: subject-verb-object, drop articles/prepositions

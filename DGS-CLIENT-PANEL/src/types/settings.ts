@@ -13,6 +13,8 @@ export interface SiteConfig {
   company_name?: string;
   company_logo?: string;
   company_logo_public_id?: string;
+  site_favicon?: string;
+  site_favicon_public_id?: string;
   company_description?: string;
   company_short_description?: string;
   company_phone?: string;
@@ -28,6 +30,10 @@ export interface SiteConfig {
   whatsapp_popup?: string;
   terms_and_conditions?: string;
   privacy_policy?: string;
+  company_latitude?: string;
+  company_longitude?: string;
+  latitude?: string;
+  longitude?: string;
   site_meta_title?: string;
   site_meta_description?: string;
   site_meta_keywords?: string;
@@ -40,9 +46,6 @@ export interface SiteConfig {
   emi_tenure_rates?: string;
   /** "true" hides CMS Hero, Reviews, Sales, and advanced settings routes globally. */
   hide_advanced_routes?: string;
-  /** Map pin from `company_settings`; used to build the contact-section embed. */
-  company_latitude?: string;
-  company_longitude?: string;
 }
 
 /**
@@ -66,8 +69,28 @@ export interface CompanySettings {
   social_links?: { linkedin?: string; facebook?: string; twitter?: string; github?: string; youtube?: string };
   calendly_url?: string;
   core_cta_objective?: string;
-  /** Decimal columns arrive as number or string depending on the serializer. */
-  company_latitude?: number | string | null;
-  company_longitude?: number | string | null;
+  company_logo?: string;
+  company_logo_public_id?: string;
+  footer_text?: string;
+  copyright_year?: string;
+  site_meta_title?: string;
+  site_meta_description?: string;
+  site_meta_keywords?: string;
+  site_og_image?: string;
+  canonical_url?: string;
+  terms_and_conditions?: string;
+  privacy_policy?: string;
+  company_latitude?: string;
+  company_longitude?: string;
+  latitude?: string;
+  longitude?: string;
+  whatsapp_popup?: string;
+  emi_enabled?: string;
+  emi_interest_rate?: string;
+  emi_min_amount?: string;
+  emi_tenures?: string;
+  emi_tenure_rates?: string;
+  hide_advanced_routes?: string;
   updated_at?: string;
+  [key: string]: any;
 }

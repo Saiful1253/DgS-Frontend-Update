@@ -59,9 +59,13 @@ function enhanceEmbedSrc(raw: string): string {
 }
 
 
+import { embedYouTubeVideos } from "@/lib/utils";
+
 export function normalizeBlogEmbedUrls(html: string | null | undefined): string {
   if (!html) return "";
-  return html.replace(
+  const withEmbedded = embedYouTubeVideos(html);
+  const normalized = withEmbedded.replace(/&nbsp;/gi, " ");
+  return normalized.replace(
     /(src=["'])([^"']+)(["'])/g,
     (_m, a, src, c) => a + enhanceEmbedSrc(src) + c,
   );

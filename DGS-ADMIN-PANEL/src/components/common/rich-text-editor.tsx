@@ -58,6 +58,16 @@ export default function RichTextEditor({
         placeholder={placeholder}
         className="bg-white rounded-xl overflow-hidden border-none"
       />
+      <style jsx global>{`
+        .ql-editor iframe.ql-video {
+          width: 100% !important;
+          aspect-ratio: 16 / 9 !important;
+          height: auto !important;
+          min-height: 280px;
+          border-radius: 0.75rem;
+          margin: 1rem 0;
+        }
+      `}</style>
     </div>
   );
 }

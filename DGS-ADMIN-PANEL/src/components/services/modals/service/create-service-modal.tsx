@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { type CategoryOptionSource } from "@/lib/service-categories";
 import { Service } from "@/types/service";
-import { saveService, saveServiceCategory, uploadServiceIcon } from "@/services/service/service.service";
+import { saveService, saveServiceCategory, uploadServiceIcon, listServiceCategories } from "@/services/service/service.service";
 import { serviceSchema } from "@/zod/service.validation";
 import { validateDraft, firstError, clearFieldError } from "@/lib/form-validation";
 import { ImageUploadField, type ImageUploadFieldHandle } from "@/components/common/image-upload-field";
@@ -31,6 +31,7 @@ interface CreateServiceModalProps {
   defaultCategory?: string;
   onOpenManageCategories?: () => void;
   onCategoriesUpdated?: (newCategories: CategoryOptionSource[]) => void;
+  onSuccess?: (createdService: Service) => void;
 }
 
 interface FeatureItem {
@@ -53,6 +54,7 @@ export default function CreateServiceModal({
   defaultCategory,
   onOpenManageCategories,
   onCategoriesUpdated,
+  onSuccess,
 }: CreateServiceModalProps) {
   const router = useRouter();
 
@@ -68,6 +70,22 @@ export default function CreateServiceModal({
   });
 
   const [category, setCategory] = useState<string>(initialCategory || categories[0] || "");
+
+  useEffect(() => {
+    if (open && (!categoriesProp || categoriesProp.length === 0)) {
+      listServiceCategories()
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            const names = res.data.map((c: any) => c.name).filter(Boolean);
+            if (names.length > 0) {
+              setCategories(names);
+              setCategory((prev) => prev || names[0]);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [open, categoriesProp]);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
@@ -315,6 +333,13 @@ export default function CreateServiceModal({
       if (res.success) {
         toast.success(res.message || "Service created successfully");
         onOpenChange(false);
+        if (onSuccess) {
+          const createdService: Service = (res.data as Service) || ({
+            ...payload,
+            id: Date.now(),
+          } as any);
+          onSuccess(createdService);
+        }
         router.refresh();
       } else {
         if (res.errors) {

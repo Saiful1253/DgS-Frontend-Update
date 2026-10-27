@@ -56,5 +56,25 @@ and `ctx_callgraph(action="callers")` to confirm blast radius.
 - **End:** `ctx_session(action="decision", content="what was done + next steps")`
 - **On [CHECKPOINT]:** `ctx_session(action="task", value="current status")`
 
+## Backend Feature Map
+
+- `src/whatwedo/` owns the `WhatWeDo` entity and create/update DTOs.
+- `WhatWeDoService` provides CRUD operations, soft deletion, and an available-only public query.
+- `WhatWeDoController` exposes public `GET /what-we-do/public` and JWT-protected
+  admin read/update/delete routes at `/what-we-do`, plus `GET
+  /what-we-do/categories` for distinct, non-empty categories of non-deleted
+  rows.
+- `POST /what-we-do/create` is public, accepts an array of validated create
+  DTOs, and bulk-saves rows. Duplicate category/sort-order pairs are assigned
+  the next available order and reported in the response.
+- `PUT /what-we-do/:id` and `PATCH /what-we-do/:id` update one row; duplicate
+  category/sort-order pairs are reassigned to the next free order and reported.
+- `WhatWeDoModule` registers the controller, TypeORM repository, and service;
+  `AppModule` imports it.
+- `npm run seed:what-we-do` inserts the reference data idempotently, skipping
+  existing non-deleted category/order pairs.
+- Active records use `is_deleted = false`; public records also require `is_available = true`.
+- Both list queries sort by `sort_order`, then `id`.
+
 NEVER use native Read/Grep/Shell when ctx_* equivalents are available.
 <!-- /lean-ctx -->

@@ -135,6 +135,50 @@ export async function listPortfolioCategoriesAction(
   }
 }
 
+export async function listPortfolioAreasAction(
+  page = 1,
+  limit = 6
+): Promise<ActionResult> {
+  try {
+    const res = await serverFetch.get(`/portfolio/areas?page=${page}&limit=${limit}`);
+    if (!res.ok) {
+      return failWithStatus(
+        res.status === 401 || res.status === 403
+          ? unauthorizedMessage("portfolio areas")
+          : await extractApiErrorMessage(res, "Failed to load portfolio areas"),
+        res.status
+      );
+    }
+
+    const json = await parseApiResponse(res);
+    if (json?.success === false) {
+      return failWithStatus(
+        json?.message || "Failed to load portfolio areas",
+        json?.statusCode
+      );
+    }
+
+    const wrapped = json?.data;
+    const arrayData = Array.isArray(wrapped) ? wrapped : wrapped?.data;
+    const rows = Array.isArray(arrayData) ? arrayData : [];
+    const meta = json?.meta ?? wrapped?.meta ?? {
+      total: rows.length,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(rows.length / limit)),
+    };
+
+    return {
+      success: true,
+      message: "Portfolio areas loaded",
+      data: rows,
+      meta,
+    } as ActionResult;
+  } catch (e: unknown) {
+    return fail(e instanceof Error ? e.message : "Failed to load portfolio areas");
+  }
+}
+
 // ── Writes ───────────────────────────────────────────────────────────────────
 
 export async function savePortfolioAction(input: any): Promise<ActionResult> {
@@ -287,6 +331,74 @@ export async function deletePortfolioCategoryAction(id: number | string): Promis
   } catch (e: unknown) {
     console.error("deletePortfolioCategoryAction error:", e);
     return fail(e instanceof Error ? e.message : "Failed to delete category");
+  }
+}
+
+export async function createPortfolioAreaAction(name: string): Promise<ActionResult> {
+  try {
+    const trimmed = name?.trim();
+    if (!trimmed) {
+      return fail("Area name cannot be empty");
+    }
+
+    const res = await serverFetch.post("/portfolio/areas", {
+      body: JSON.stringify({ name: trimmed }),
+    });
+    const result = fromServiceResponse(await parseApiResponse(res), "Failed to create area");
+    if (!result.success) return result;
+
+    revalidatePortfolioSurfaces();
+
+    return {
+      ...result,
+      message: `Area "${trimmed}" created successfully`,
+    };
+  } catch (e: unknown) {
+    console.error("createPortfolioAreaAction error:", e);
+    return fail(e instanceof Error ? e.message : "Failed to create area");
+  }
+}
+
+export async function updatePortfolioAreaAction(
+  id: number | string,
+  name: string
+): Promise<ActionResult> {
+  try {
+    const trimmed = name?.trim();
+    if (!trimmed) {
+      return fail("Area name cannot be empty");
+    }
+
+    const res = await serverFetch.put(`/portfolio/areas/${id}`, {
+      body: JSON.stringify({ name: trimmed }),
+    });
+    const result = fromServiceResponse(await parseApiResponse(res), "Failed to update area");
+    if (!result.success) return result;
+
+    revalidatePortfolioSurfaces();
+
+    return {
+      ...result,
+      message: "Area updated successfully",
+    };
+  } catch (e: unknown) {
+    console.error("updatePortfolioAreaAction error:", e);
+    return fail(e instanceof Error ? e.message : "Failed to update area");
+  }
+}
+
+export async function deletePortfolioAreaAction(id: number | string): Promise<ActionResult> {
+  try {
+    const res = await serverFetch.delete(`/portfolio/areas/${id}`);
+    const result = fromServiceResponse(await parseApiResponse(res), "Failed to delete area");
+    if (!result.success) return result;
+
+    revalidatePortfolioSurfaces();
+
+    return ok("Area deleted successfully");
+  } catch (e: unknown) {
+    console.error("deletePortfolioAreaAction error:", e);
+    return fail(e instanceof Error ? e.message : "Failed to delete area");
   }
 }
 

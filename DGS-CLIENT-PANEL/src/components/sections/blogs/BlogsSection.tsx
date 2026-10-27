@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Pagination } from "@/components/ui/pagination";
 import BlogCard from "./BlogCard";
 import { getBlogs } from "@/services/blog/blog.service";
+import { BRAND } from "@/lib/brand";
 import BlogsSkeleton from "@/components/skeletons/BlogsSkeleton";
 
 interface BlogsSectionProps {
@@ -116,10 +117,11 @@ export default function BlogsSection({
             Engineering Insights
           </span>
           <h2 suppressHydrationWarning className="text-3xl md:text-5xl font-black text-zinc-900 uppercase tracking-tight mb-4">
-            Milanova Technologies Blog
+            {BRAND.name} Blog
           </h2>
           <p suppressHydrationWarning className="text-zinc-650 text-sm md:text-base font-medium max-w-lg mx-auto">
-            Deep dives into software architecture, cloud engineering, AI, and technology strategy.
+            Deep dives into LPG reticulation, industrial piping, fire safety and gas
+            compliance.
           </p>
         </div>
 

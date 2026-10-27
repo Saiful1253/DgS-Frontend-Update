@@ -50,15 +50,35 @@ function toPublicList(payload: any): PublicPortfolioList {
 export async function getPublicPortfolioAction(
   category?: string,
   search?: string,
-  featured?: boolean
+  featured?: boolean,
+  page?: number,
+  limit?: number,
+  status?: string,
+  projectType?: string,
+  district?: string,
+  area?: string,
 ): Promise<ActionResult> {
-    const query = { category: category?.trim() || undefined, search: search?.trim() || undefined, featured: featured === true || (typeof featured === "string" && featured === "true") };
+  const query = {
+    category: category?.trim() || undefined,
+    search: search?.trim() || undefined,
+    featured: featured === true || (typeof featured === "string" && featured === "true"),
+    status: status?.trim() || undefined,
+    projectType: projectType?.trim() || undefined,
+    district: district?.trim() || undefined,
+    area: area?.trim() || undefined,
+  };
 
   try {
     const params = new URLSearchParams();
     if (query.category) params.set("category", query.category);
     if (query.search) params.set("search", query.search);
-    if (query.featured) params.set("featured", "true" as const);
+    if (query.featured) params.set("featured", "true");
+    if (query.status) params.set("status", query.status);
+    if (query.projectType) params.set("projectType", query.projectType);
+    if (query.district) params.set("district", query.district);
+    if (query.area) params.set("area", query.area);
+    if (page) params.set("page", String(page));
+    if (limit) params.set("limit", String(limit));
     const qs = params.toString();
 
     const res = await publicFetch.get(`/portfolio/public${qs ? `?${qs}` : ""}`, {
@@ -76,9 +96,39 @@ export async function getPublicPortfolioAction(
       return failWithStatus(json?.message || "Failed to load portfolio", json?.statusCode);
     }
 
-    return ok("Portfolio loaded", toPublicList(json?.data ?? json));
+    const payload = json?.data ?? json;
+    const list = toPublicList(payload);
+    if (!list.meta && payload?.meta) {
+      list.meta = payload.meta;
+    }
+    if ((!list.projects || list.projects.length === 0) && Array.isArray(payload?.data)) {
+      list.projects = payload.data as PortfolioItem[];
+    }
+    return ok("Portfolio loaded", list);
   } catch (e: unknown) {
     return fail(e instanceof Error ? e.message : "Failed to load portfolio");
+  }
+}
+
+export async function getPublicPortfolioLocationsAction(): Promise<ActionResult> {
+  try {
+    const res = await publicFetch.get("/portfolio/public/locations", {
+      next: { revalidate: REVALIDATE_SECONDS },
+    });
+    if (!res.ok) {
+      return failWithStatus(
+        await extractApiErrorMessage(res, "Failed to load portfolio locations"),
+        res.status
+      );
+    }
+    const json = await parseApiResponse(res);
+    if (json?.success === false) {
+      return failWithStatus(json?.message || "Failed to load portfolio locations", json?.statusCode);
+    }
+    const data = json?.data ?? json;
+    return ok("Portfolio locations loaded", Array.isArray(data) ? data : []);
+  } catch (e: unknown) {
+    return fail(e instanceof Error ? e.message : "Failed to load portfolio locations");
   }
 }
 

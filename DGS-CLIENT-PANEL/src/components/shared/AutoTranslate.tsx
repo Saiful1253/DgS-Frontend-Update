@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 import { useLanguage } from "@/context/LanguageContext";
 import { translateTextsAction } from "@/actions/translate.actions";
+import { postProcessBangla, STATIC_DICTIONARY } from "@/lib/translate";
 
 const SKIP_TAGS = new Set([
   "SCRIPT",
@@ -23,7 +24,14 @@ const SKIP_TAGS = new Set([
 const SKIP_SELECTOR = '[data-no-translate], [translate="no"]';
 const TRANS_ATTRS = ["placeholder", "title", "alt", "aria-label", "aria-description"] as const;
 
-const clientCache = new Map<string, string>();
+export const clientCache = new Map<string, string>();
+
+// Pre-fill client cache with the static dictionary so modal & UI text translates synchronously
+for (const [key, value] of Object.entries(STATIC_DICTIONARY)) {
+  const norm = key.trim().replace(/\s+/g, " ");
+  clientCache.set(norm, value);
+  clientCache.set(norm.toLowerCase(), value);
+}
 
 function normalizeCore(text: string): string {
   return text.trim().replace(/\s+/g, " ");
@@ -106,6 +114,58 @@ export default function AutoTranslate() {
       return m;
     };
 
+    const applyCached = (groups: Map<string, Text[]>, attrGroups: Map<string, AttrItem[]>) => {
+      for (const [core, bucket] of groups) {
+        let translated = clientCache.get(core);
+        if (translated) {
+          translated = postProcessBangla(translated);
+        } else {
+          const processed = postProcessBangla(core);
+          if (processed !== core) {
+            translated = processed;
+          }
+        }
+
+        if (!translated || translated === core) continue;
+
+        for (const node of bucket) {
+          const raw = originals.get(node) ?? node.nodeValue ?? "";
+          if (!originals.has(node)) originals.set(node, raw);
+          const leading = raw.match(/^\s*/)?.[0] ?? "";
+          const trailing = raw.match(/\s*$/)?.[0] ?? "";
+          const next = `${leading}${translated}${trailing}`;
+          if (node.nodeValue !== next) node.nodeValue = next;
+          touched.add(node);
+        }
+      }
+
+      for (const [core, bucket] of attrGroups) {
+        let translated = clientCache.get(core);
+        if (translated) {
+          translated = postProcessBangla(translated);
+        } else {
+          const processed = postProcessBangla(core);
+          if (processed !== core) {
+            translated = processed;
+          }
+        }
+
+        if (!translated || translated === core) continue;
+
+        for (const a of bucket) {
+          const am = getAttrMap(a.el);
+          if (!am.has(a.attr)) am.set(a.attr, a.raw);
+          const raw = am.get(a.attr) ?? a.raw;
+          const leading = raw.match(/^\s*/)?.[0] ?? "";
+          const trailing = raw.match(/\s*$/)?.[0] ?? "";
+          const next = `${leading}${translated}${trailing}`;
+          try {
+            if (a.el.getAttribute(a.attr) !== next) a.el.setAttribute(a.attr, next);
+          } catch {}
+        }
+      }
+    };
+
     const translateNodes = async (nodes: Text[], attrs: AttrItem[]) => {
       const groups = new Map<string, Text[]>();
       for (const node of nodes) {
@@ -127,6 +187,10 @@ export default function AutoTranslate() {
 
       if (groups.size === 0 && attrGroups.size === 0) return;
 
+      // 1. Immediately synchronously translate all known / cached phrases
+      applyCached(groups, attrGroups);
+
+      // 2. Collect any unknown phrases to fetch asynchronously
       const missing: string[] = [];
       for (const core of groups.keys()) {
         if (!clientCache.has(core)) missing.push(core);
@@ -139,41 +203,14 @@ export default function AutoTranslate() {
         try {
           const fresh = await translateTextsAction(missing);
           for (const [key, value] of Object.entries(fresh)) clientCache.set(key, value);
+          // 3. Re-apply cached translations for newly fetched items
+          applyCached(groups, attrGroups);
         } catch {}
-      }
-
-      for (const [core, bucket] of groups) {
-        const translated = clientCache.get(core);
-        if (!translated || translated === core) continue;
-        for (const node of bucket) {
-          const raw = originals.get(node) ?? node.nodeValue ?? "";
-          if (!originals.has(node)) originals.set(node, raw);
-          const leading = raw.match(/^\s*/)?.[0] ?? "";
-          const trailing = raw.match(/\s*$/)?.[0] ?? "";
-          const next = `${leading}${translated}${trailing}`;
-          if (node.nodeValue !== next) node.nodeValue = next;
-          touched.add(node);
-        }
-      }
-
-      for (const [core, bucket] of attrGroups) {
-        const translated = clientCache.get(core);
-        if (!translated || translated === core) continue;
-        for (const a of bucket) {
-          const am = getAttrMap(a.el);
-          if (!am.has(a.attr)) am.set(a.attr, a.raw);
-          const raw = am.get(a.attr) ?? a.raw;
-          const leading = raw.match(/^\s*/)?.[0] ?? "";
-          const trailing = raw.match(/\s*$/)?.[0] ?? "";
-          const next = `${leading}${translated}${trailing}`;
-          try {
-            if (a.el.getAttribute(a.attr) !== next) a.el.setAttribute(a.attr, next);
-          } catch {}
-        }
       }
     };
 
     if (locale !== "bn") {
+      document.documentElement.classList.remove("i18n-ready");
       for (const node of touched) {
         const original = originals.get(node);
         if (original !== undefined && node.nodeValue !== original) node.nodeValue = original;
@@ -187,53 +224,29 @@ export default function AutoTranslate() {
     let timer: number | null = null;
     let cancelled = false;
 
-    // Delay execution until after React finishes hydrating SSR & Suspense boundaries
-    const initTimer = setTimeout(() => {
+    const pendingNodes = new Set<Text>();
+    const pendingAttrs = new Set<AttrItem>();
+
+    const flush = () => {
+      timer = null;
+      const batchNodes = Array.from(pendingNodes);
+      pendingNodes.clear();
+      const batchAttrs = Array.from(pendingAttrs);
+      pendingAttrs.clear();
+      if (batchNodes.length > 0 || batchAttrs.length > 0) void translateNodes(batchNodes, batchAttrs);
+    };
+
+    // Defer observation & initial translation after React hydration completely completes
+    const runTranslation = () => {
       if (cancelled) return;
 
       const initialText: Text[] = [];
       const initialAttr: AttrItem[] = [];
       collectTextNodes(document.body, initialText);
       collectAttrItems(document.body, initialAttr);
-      const totalInitial = initialText.length + initialAttr.length;
-      if (totalInitial > 150) {
-        const mid = Math.min(120, initialText.length);
-        void translateNodes(initialText.slice(0, mid), initialAttr.slice(0, 40)).then(() => {
-          setTimeout(() => {
-            if (cancelled) return;
-            void translateNodes(initialText.slice(mid), initialAttr.slice(40)).then(() => {
-              if (cancelled) return;
-              if ("requestIdleCallback" in window) {
-                requestIdleCallback(
-                  () => {
-                    if (cancelled) return;
-                    const moreText: Text[] = [];
-                    const moreAttr: AttrItem[] = [];
-                    collectTextNodes(document.body, moreText);
-                    collectAttrItems(document.body, moreAttr);
-                    void translateNodes(moreText, moreAttr);
-                  },
-                  { timeout: 1500 }
-                );
-              }
-            });
-          }, 0);
-        });
-      } else {
-        void translateNodes(initialText, initialAttr);
-      }
-
-      const pendingNodes = new Set<Text>();
-      const pendingAttrs = new Set<AttrItem>();
-
-      const flush = () => {
-        timer = null;
-        const batchNodes = Array.from(pendingNodes);
-        pendingNodes.clear();
-        const batchAttrs = Array.from(pendingAttrs);
-        pendingAttrs.clear();
-        if (batchNodes.length > 0 || batchAttrs.length > 0) void translateNodes(batchNodes, batchAttrs);
-      };
+      void translateNodes(initialText, initialAttr).finally(() => {
+        document.documentElement.classList.add("i18n-ready");
+      });
 
       observer = new MutationObserver((mutations) => {
         let changed = false;
@@ -248,28 +261,43 @@ export default function AutoTranslate() {
               changed = true;
             }
           } else if (mutation.type === "childList") {
+            const addedNodesBatch: Text[] = [];
+            const addedAttrsBatch: AttrItem[] = [];
             for (const added of Array.from(mutation.addedNodes)) {
-              const found: Text[] = [];
-              collectTextNodes(added, found);
-              for (const n of found) pendingNodes.add(n);
-              const foundAttr: AttrItem[] = [];
-              collectAttrItems(added, foundAttr);
-              for (const a of foundAttr) pendingAttrs.add(a);
-              if (found.length > 0 || foundAttr.length > 0) changed = true;
+              collectTextNodes(added, addedNodesBatch);
+              collectAttrItems(added, addedAttrsBatch);
+            }
+            if (addedNodesBatch.length > 0 || addedAttrsBatch.length > 0) {
+              // Immediately translate known terms synchronously
+              void translateNodes(addedNodesBatch, addedAttrsBatch);
             }
           }
         }
-        if (changed && timer === null) {
-          timer = window.setTimeout(flush, 100);
+        if (changed) {
+          if (timer !== null) {
+            window.clearTimeout(timer);
+            timer = null;
+          }
+          flush();
         }
       });
 
       observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-    }, 400);
+    };
+
+    let rafId: number | null = null;
+    let timerId: NodeJS.Timeout | null = null;
+
+    rafId = requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(() => {
+        timerId = setTimeout(runTranslation, 100);
+      });
+    });
 
     return () => {
       cancelled = true;
-      clearTimeout(initTimer);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      if (timerId !== null) clearTimeout(timerId);
       if (observer) observer.disconnect();
       if (timer !== null) window.clearTimeout(timer);
     };

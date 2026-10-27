@@ -1,13 +1,14 @@
-import React from "react";
+import React, { Suspense } from "react";
 import ContactForm from "@/components/contact/contact-form";
 import { getPublicServices } from "@/services/service/service.service";
+import { BRAND } from "@/lib/brand";
 
 export const revalidate = 3600;
 
 export const metadata = {
-  title: "Contact & Consultation | MilanoVA Technologies",
+  title: `Contact & Consultation | ${BRAND.name}`,
   description:
-    "Talk to MilanoVA about software engineering, creative production, data, growth, or advisory services. Request a quote or book a consultation.",
+    "Talk to Digital Gas Service about LPG reticulation, autogas plants, industrial pipelines or fire protection. Request a quotation or a site visit.",
 };
 
 export default async function ContactPage() {
@@ -36,7 +37,16 @@ export default async function ContactPage() {
       </section>
 
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <ContactForm serviceOptions={serviceOptions} />
+        {/* The form reads `?topic=` for its prefill, and `useSearchParams` opts a
+            route into dynamic rendering unless it sits behind a Suspense boundary.
+            The fallback keeps the static shell intact while it hydrates. */}
+        <Suspense
+          fallback={
+            <div className="h-96 animate-pulse rounded-2xl bg-slate-900/60 border border-slate-800/80" />
+          }
+        >
+          <ContactForm serviceOptions={serviceOptions} />
+        </Suspense>
       </section>
     </div>
   );

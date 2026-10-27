@@ -11,7 +11,7 @@ import { translateToBangla } from "@/lib/translate";
  */
 
 const MAX_TEXTS = 400;
-const MAX_TEXT_LENGTH = 2000;
+const MAX_TEXT_LENGTH = 15000;
 
 export async function translateTextsAction(texts: string[]): Promise<Record<string, string>> {
   if (!Array.isArray(texts)) return {};
@@ -19,7 +19,7 @@ export async function translateTextsAction(texts: string[]): Promise<Record<stri
   const clean = texts
     .filter((t): t is string => typeof t === "string")
     .slice(0, MAX_TEXTS)
-    .map((t) => t.slice(0, MAX_TEXT_LENGTH))
+    .map((t) => (t.length > MAX_TEXT_LENGTH ? t.slice(0, MAX_TEXT_LENGTH) : t))
     .filter((t) => t.trim().length > 0);
 
   if (clean.length === 0) return {};

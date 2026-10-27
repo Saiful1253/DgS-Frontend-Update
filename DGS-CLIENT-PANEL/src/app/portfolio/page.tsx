@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import { getPublicPortfolio } from "@/services/portfolio/portfolio.service";
 import PortfolioClientView from "@/components/portfolio/PortfolioClientView";
+import { BRAND } from "@/lib/brand";
 
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Portfolio & Case Studies | MilanoVA Technologies",
+  title: `Portfolio & Projects | ${BRAND.name}`,
   description:
-    "Browse MilanoVA's shipped work across software engineering, creative production, and digital marketing — each project documented with its challenge, solution, and measurable outcome.",
+    "Delivered LPG reticulation, industrial pipeline and fire protection projects across Bangladesh — each documented with its scope, the challenge it solved, and the outcome.",
 };
 
 export default async function PortfolioPage() {
-  const { projects, categories } = await getPublicPortfolio();
+  const { projects, categories, meta } = await getPublicPortfolio({ limit: 20 });
 
   return (
     <>
@@ -32,7 +33,7 @@ export default async function PortfolioPage() {
       </section>
 
       <main className="mx-auto max-w-7xl px-4 py-12 md:px-10 md:py-16">
-        <PortfolioClientView projects={projects} categories={categories} />
+        <PortfolioClientView projects={projects} categories={categories} meta={meta} />
       </main>
     </>
   );

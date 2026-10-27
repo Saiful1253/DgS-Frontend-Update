@@ -64,7 +64,14 @@ export const getServicesByGroup = cache(
     const payload = await getPublicServices();
     return payload.services
       .filter((service) => service.group_id === groupId)
-      .sort((a, b) => a.display_order - b.display_order);
+      .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+  }
+);
+
+export const getPublicServiceBySlug = cache(
+  async (slug: string): Promise<Service | null> => {
+    const payload = await getPublicServices();
+    return payload.services.find((s) => s.slug === slug) ?? null;
   }
 );
 

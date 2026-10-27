@@ -7,7 +7,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // /api/v1 prefix, which differs from every other backend call site.
   const backendUrl = getBackendUrl();
 
-  let products: { slug: string; updated_at?: string }[] = [];
   let blogs: { slug: string; updated_at?: string }[] = [];
   let portfolio: { slug: string; updated_at?: string }[] = [];
 
@@ -20,7 +19,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // interceptor is ever scoped differently.
     const payload = res?.success && res?.data ? res.data : res;
     if (payload) {
-      products = payload.products || [];
       blogs = payload.blogs || [];
       portfolio = payload.portfolio || [];
     }
@@ -30,19 +28,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("Failed to generate sitemap items:", error);
   }
 
-  // Every top-level route the app actually renders. The previous sitemap listed
-  // only `/`, so the entire marketing surface — services, products, blogs,
-  // company, legal, contact — was invisible to crawlers while still being
-  // linked from the navbar.
-  //
-  // `/technologies` and `/testimonials` are deliberately absent: no page and no
-  // inbound link exist for either. Listing them would advertise 404s, and an
-  // empty page just to satisfy the sitemap would be thin content.
+  // Every top-level route the app actually renders.
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${base}/`, lastModified: new Date(), changeFrequency: "hourly", priority: 1.0 },
     { url: `${base}/services`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.9 },
-    { url: `${base}/products`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
     { url: `${base}/portfolio`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.9 },
+    { url: `${base}/certificates`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/blogs`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
     { url: `${base}/company`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/contact`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.8 },
@@ -54,13 +45,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.3,
     },
   ];
-
-  const productRoutes: MetadataRoute.Sitemap = products.map((p) => ({
-    url: `${base}/products/${p.slug}`,
-    lastModified: p.updated_at ? new Date(p.updated_at) : new Date(),
-    changeFrequency: "daily",
-    priority: 0.8,
-  }));
 
   const blogRoutes: MetadataRoute.Sitemap = blogs.map((b) => ({
     url: `${base}/blogs/${b.slug}`,
@@ -78,5 +62,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...productRoutes, ...blogRoutes, ...portfolioRoutes];
+  return [...staticRoutes, ...blogRoutes, ...portfolioRoutes];
 }

@@ -33,14 +33,13 @@ export interface PortfolioItem {
   client_logo?: string;
   category: string;
   tags: string[];
-  live_url?: string;
   app_store_url?: string;
   play_store_url?: string;
   is_featured: boolean;
   media_type?: PortfolioMediaType;
   media_url?: string;
   project_status?: PortfolioProjectStatus;
-  project_type?: PortfolioProjectType;
+  project_type?: string;
   district?: string;
   area?: string;
   address?: string;
@@ -48,15 +47,12 @@ export interface PortfolioItem {
   longitude?: number | string | null;
   description?: string;
   cover_image?: string;
-  primary_challenge?: string;
-  primary_solution?: string;
   comparison_enabled?: boolean;
   comparison_title?: string;
   industry_standard_text?: string;
   our_approach_text?: string;
   pricing_enabled?: boolean;
   pricing_title?: string;
-  challenges?: PortfolioChallenge[];
   pricing_tiers?: PortfolioPricingTier[];
   created_at?: string;
   updated_at?: string;
@@ -67,6 +63,14 @@ export type PortfolioInput = Omit<PortfolioItem, "id" | "created_at" | "updated_
 };
 
 export interface PortfolioCategory {
+  id: number;
+  name: string;
+  slug?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PortfolioArea {
   id: number;
   name: string;
   slug?: string;

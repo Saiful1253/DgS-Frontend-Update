@@ -34,7 +34,7 @@ export default function BlogCard({ blog }: BlogCardProps) {
       href={`/blogs/${blog.slug}`}
       className="group block h-full focus:outline-none"
     >
-      <div className="bg-card rounded-2xl overflow-hidden border border-slate-100 dark:border-zinc-800/80 flex flex-col h-full transition-all duration-300 hover:shadow-sm hover:border-brand-accent/20 hover:-translate-y-1 bg-white dark:bg-zinc-900/40">
+      <div suppressHydrationWarning className="bg-card rounded-2xl overflow-hidden border border-slate-100 dark:border-zinc-800/80 flex flex-col h-full transition-all duration-300 hover:shadow-sm hover:border-brand-accent/20 hover:-translate-y-1 bg-white dark:bg-zinc-900/40">
         <div className="block overflow-hidden aspect-[16/10] bg-muted relative">
           {blog.featured_image_url ? (
             <Image

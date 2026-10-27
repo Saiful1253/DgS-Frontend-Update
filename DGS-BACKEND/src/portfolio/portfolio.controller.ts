@@ -22,6 +22,10 @@ import {
   CreatePortfolioCategoryDto,
   UpdatePortfolioCategoryDto,
 } from './dto/portfolio-category.dto';
+import {
+  CreatePortfolioAreaDto,
+  UpdatePortfolioAreaDto,
+} from './dto/portfolio-area.dto';
 
 @ApiTags('Portfolio')
 @Controller('portfolio')
@@ -137,6 +141,46 @@ export class PortfolioController {
     @ApiOperation({ summary: 'Delete portfolio category' })
   async removeCategory(@Param('id', ParseIntPipe) id: number) {
     return this.portfolioService.deleteCategory(id);
+  }
+
+  @Get('areas')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'List all portfolio areas (paginated, newest first)' })
+  async findAllAreas(
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.portfolioService.findAllAreas(
+      query.page ?? 1,
+      query.limit ?? 20,
+    );
+  }
+
+  @Post('areas')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Create new portfolio area' })
+  async createArea(@Body() body: CreatePortfolioAreaDto) {
+    return this.portfolioService.createArea(body.name);
+  }
+
+  @Put('areas/:id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update portfolio area' })
+  async updateArea(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdatePortfolioAreaDto,
+  ) {
+    return this.portfolioService.updateArea(id, body.name);
+  }
+
+  @Delete('areas/:id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Delete portfolio area' })
+  async removeArea(@Param('id', ParseIntPipe) id: number) {
+    return this.portfolioService.deleteArea(id);
   }
 
   @Get(':slug')

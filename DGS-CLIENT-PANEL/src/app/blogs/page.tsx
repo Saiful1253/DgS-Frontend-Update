@@ -2,19 +2,20 @@ import React, { Suspense } from "react";
 import type { Metadata } from "next";
 import { getBlogs } from "@/services/blog/blog.service";
 import { getSiteConfig } from "@/services/site-config/site-config.service";
+import { BRAND } from "@/lib/brand";
 import BlogsListing from "@/components/sections/blogs/BlogsListing";
 
 export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
   const siteConfig = (await getSiteConfig().catch(() => ({}))) as { company_name?: string };
-  const companyName = siteConfig.company_name ?? "Milanova Technologies";
+  const companyName = siteConfig.company_name ?? BRAND.name;
   return {
     title: "Blogs",
-    description: `Read the latest engineering, cloud, and technology articles from ${companyName}.`,
+    description: `Read the latest LPG, pipeline and safety engineering articles from ${companyName}.`,
     openGraph: {
       title: `${companyName} | Blog`,
-      description: "Engineering insights, cloud architecture, AI, and technology strategy articles.",
+      description: "Gas reticulation, industrial piping, fire safety and compliance insights.",
       type: "website",
     },
     alternates: { canonical: "/blogs" },

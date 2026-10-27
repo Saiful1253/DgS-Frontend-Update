@@ -2,7 +2,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2, Send, CheckCircle2, AlertCircle, Layers } from "lucide-react";
+import { resolveContactTopic } from "@/lib/contact-topics";
 
 interface Props {
   serviceOptions: string[];
@@ -24,10 +26,34 @@ const inputClass =
   "w-full h-11 px-3.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-colors";
 
 export default function ContactForm({ serviceOptions }: Props) {
-  const [form, setForm] = useState(EMPTY);
-  const [selected, setSelected] = useState<string[]>([]);
+  const searchParams = useSearchParams();
+
+  /**
+   * The topic is latched on arrival, in a lazy initialiser.
+   *
+   * Reading it on every render would rewrite the message box whenever the URL
+   * changed — including when the visitor edits the query themselves — and doing
+   * it in an effect would cascade a second render. Seeding the initial state is
+   * the honest reading of "the page was opened with ?topic=…".
+   */
+  const [topicSlug] = useState(() => searchParams.get("topic"));
+  const topic = resolveContactTopic(topicSlug);
+
+  const [form, setForm] = useState(() =>
+    topic ? { ...EMPTY, message: topic.message } : EMPTY
+  );
+  const [selected, setSelected] = useState<string[]>(() =>
+    topic?.serviceMatch
+      ? serviceOptions.filter((name) => topic.serviceMatch!.test(name))
+      : []
+  );
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
+
+  const clearTopic = () => {
+    setForm((prev) => ({ ...prev, message: "" }));
+    setSelected([]);
+  };
 
   const update = (field: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -92,6 +118,21 @@ export default function ContactForm({ serviceOptions }: Props) {
       onSubmit={handleSubmit}
       className="p-6 sm:p-8 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm"
     >
+      {topic ? (
+        <div className="mb-5 flex items-start justify-between gap-3 rounded-xl border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
+          <p className="text-xs text-cyan-200">
+            <span className="font-bold">Topic:</span> {topic.label} — the message below is
+            pre-filled so you only have to add your details.
+          </p>
+          <button
+            type="button"
+            onClick={clearTopic}
+            className="shrink-0 text-xs font-semibold text-cyan-300 hover:text-cyan-100"
+          >
+            Clear
+          </button>
+        </div>
+      ) : null}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <label htmlFor="contact-name" className="text-xs font-semibold uppercase tracking-wider text-slate-400">

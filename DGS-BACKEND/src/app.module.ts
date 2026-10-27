@@ -28,6 +28,7 @@ import { ClientLogosModule } from './client-logos/client-logos.module';
 import { PricingModule } from './pricing/pricing.module';
 import { MailModule } from './common/mail/mail.module';
 import { ServicesModule } from './services/services.module';
+import { WhatWeDoModule } from './whatwedo/whatwedo.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { ServicesModule } from './services/services.module';
     PricingModule,
     MailModule,
     ServicesModule,
+    WhatWeDoModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

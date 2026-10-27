@@ -7,6 +7,8 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, EffectFade, Pagination } from "swiper/modules";
 import Image from "next/image";
 import { useSiteConfig } from "@/context/SiteConfigContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { toBanglaDigits } from "@/lib/translate";
 import type { Swiper as SwiperType } from "swiper";
 import type { HeroSection, HeroMedia } from "@/types/cms/cms";
 
@@ -161,16 +163,21 @@ function CtaButton({
   label,
   link,
   variant,
+  dark = false,
 }: {
   label: string;
   link?: string | null;
   variant: "solid" | "outline";
+  dark?: boolean;
 }) {
   const { href, kind, target, rel, displayLabel } = resolveCta(link, label);
+  const { locale } = useLanguage();
   const Icon = kind === "phone" ? Phone : kind === "whatsapp" ? MessageCircle : ExternalLink;
   const cls =
     variant === "solid"
       ? "h-12 px-7 rounded-lg bg-[#00668a] text-white hover:bg-[#004c69] transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 border-none shadow-xl cursor-pointer"
+      : dark
+      ? "h-12 px-7 rounded-lg bg-white/10 border border-white/30 text-white hover:bg-white/20 hover:text-white transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 shadow-xl backdrop-blur-md cursor-pointer"
       : "h-12 px-7 rounded-lg bg-transparent border border-[#00668a] text-[#00668a] hover:bg-[#00668a]/10 transition-all duration-300 text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center gap-2 shadow-xl backdrop-blur-md cursor-pointer";
 
   const handleClick = (e: React.MouseEvent) => {
@@ -198,9 +205,12 @@ function CtaButton({
     window.location.href = href;
   };
 
+  const rawLabel = displayLabel || label;
+  const finalDisplay = locale === "bn" ? toBanglaDigits(rawLabel) : rawLabel;
+
   return (
     <Button size="lg" className={cls} onClick={handleClick}>
-      <span>{displayLabel || label}</span>
+      <span>{finalDisplay}</span>
       <Icon size={15} />
     </Button>
   );
@@ -674,7 +684,7 @@ export default function Hero({ activeHero }: HeroProps) {
               )}
 
               {(secondaryCtaLabel || secondaryCtaLink) && (
-                <CtaButton label={secondaryCtaLabel || ""} link={secondaryCtaLink} variant="outline" />
+                <CtaButton label={secondaryCtaLabel || ""} link={secondaryCtaLink} variant="outline" dark={hasMedia} />
               )}
             </div>
           </div>

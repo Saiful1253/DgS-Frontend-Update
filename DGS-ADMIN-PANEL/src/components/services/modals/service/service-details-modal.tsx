@@ -21,6 +21,7 @@ import {
   ImageIcon,
   Trash2,
 } from "lucide-react";
+import { embedYouTubeVideos } from "@/lib/utils";
 
 interface ServiceDetailsModalProps {
   open: boolean;
@@ -94,8 +95,8 @@ export default function ServiceDetailsModal({
               Full Description
             </span>
             <div 
-              className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 sm:p-3.5 rounded-lg border border-slate-200/80 max-h-40 overflow-y-auto prose prose-xs max-w-none"
-              dangerouslySetInnerHTML={{ __html: service.description || "No description provided." }}
+              className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 sm:p-3.5 rounded-lg border border-slate-200/80 max-h-60 overflow-y-auto prose prose-xs max-w-none [&_iframe]:w-full [&_iframe]:aspect-video [&_iframe]:rounded-xl [&_iframe]:my-3"
+              dangerouslySetInnerHTML={{ __html: embedYouTubeVideos(service.description) || "No description provided." }}
             />
           </div>
 

@@ -39,7 +39,13 @@ export function LanguageProvider({
   initialLocale?: Locale;
   children: React.ReactNode;
 }) {
-  const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    if (typeof window !== "undefined") {
+      const stored = readLocaleCookie();
+      if (stored) return stored;
+    }
+    return initialLocale;
+  });
 
   // Restore the visitor's choice on mount (client only).
   useEffect(() => {

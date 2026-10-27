@@ -21,6 +21,10 @@ export interface PortfolioPricingTier {
   sort_order?: number;
 }
 
+export type PortfolioMediaType = 'image' | 'youtube';
+export type PortfolioProjectStatus = 'completed' | 'ongoing';
+export type PortfolioProjectType = 'residential' | 'industrial' | 'commercial_restaurant';
+
 export interface PortfolioItem {
   id: number;
   project_name: string;
@@ -29,20 +33,26 @@ export interface PortfolioItem {
   client_logo?: string;
   category: string;
   tags: string[];
-  live_url?: string;
   app_store_url?: string;
   play_store_url?: string;
   is_featured: boolean;
+  media_type?: PortfolioMediaType;
+  media_url?: string;
+  project_status?: PortfolioProjectStatus;
+  project_type?: string;
+  district?: string;
+  area?: string;
+  address?: string;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  description?: string;
   cover_image?: string;
-  primary_challenge?: string;
-  primary_solution?: string;
   comparison_enabled?: boolean;
   comparison_title?: string;
   industry_standard_text?: string;
   our_approach_text?: string;
   pricing_enabled?: boolean;
   pricing_title?: string;
-  challenges?: PortfolioChallenge[];
   pricing_tiers?: PortfolioPricingTier[];
   created_at?: string;
   updated_at?: string;
@@ -60,34 +70,41 @@ export interface PortfolioCategory {
   updated_at?: string;
 }
 
+export interface PortfolioLocation {
+  id: number;
+  project_name: string;
+  slug: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  project_status?: PortfolioProjectStatus;
+  project_type?: PortfolioProjectType;
+  is_featured?: boolean;
+}
+
 /**
  * Payload of `GET /portfolio/public`.
- *
- * The endpoint does not paginate: it returns the full published set plus the
- * category tab list, because the public grid filters and searches client-side.
- * Truncating server-side would make an empty-looking tab indistinguishable from
- * an exhausted one.
  */
 export interface PublicPortfolioList {
   projects: PortfolioItem[];
+  data?: PortfolioItem[];
   categories: string[];
+  meta?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 /** SRS 4.1 - default tab; "All Projects" shows everything. */
 export const ALL_PROJECTS = "All Projects";
 
-/**
- * Seed tab list, used only when the backend has no categories yet.
- *
- * The backend falls back to the same list, so this mirrors it rather than
- * inventing a second one.
- */
 export const PORTFOLIO_CATEGORIES = [
-  "Software & Cloud",
-  "Software Engineering",
-  "Creative & Post-Production",
-  "Marketing & Growth",
-  "Mobile Apps & Platforms",
-  "AI & Automation",
-  "FinTech & Web3",
+  "Central LPG Reticulation",
+  "Industrial Heavy Piping",
+  "AutoGas Refueling Stations",
+  "Utility RMS & Compliance",
+  "Commercial & Residential Gas",
+  "Fire Protection & Hydrants",
 ] as const;

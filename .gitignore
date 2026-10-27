@@ -38,3 +38,4 @@ Thumbs.db
 ~WRL*.tmp
 .tmp
 tmp/
+srs_dump.txt

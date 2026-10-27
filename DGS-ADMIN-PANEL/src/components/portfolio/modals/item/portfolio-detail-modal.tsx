@@ -5,17 +5,12 @@ import React, { useState } from "react";
 import {
   ExternalLink,
   Edit,
-  AlertTriangle,
-  CheckCircle2,
   Tag,
   Building,
-  Smartphone,
-  Globe,
   Image as ImageIcon,
   Star,
   Loader2,
   MapPin,
-  Youtube,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +20,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn, embedYouTubeVideos } from "@/lib/utils";
 import { PortfolioItem } from "@/types/portfolio";
 
 interface PortfolioDetailModalProps {
@@ -49,8 +44,6 @@ export default function PortfolioDetailModal({
 
   if (!item) return null;
 
-  const totalChallenges = item.challenges?.length || 0;
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,12 +55,6 @@ export default function PortfolioDetailModal({
               <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold uppercase tracking-wider">
                 {item.category}
               </span>
-
-              {item.project_type && (
-                <span className="px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 text-[11px] font-bold capitalize">
-                  {item.project_type.replace(/_/g, " ")}
-                </span>
-              )}
 
               {item.project_status && (
                 <span className={cn(
@@ -119,30 +106,14 @@ export default function PortfolioDetailModal({
                   </div>
                 )}
               </div>
-
-              {/* External Live Link — shown in header */}
-              {item.live_url && (
-                <div className="flex flex-wrap items-center gap-2 shrink-0 self-start pt-0.5">
-                  <a
-                    href={item.live_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-bold transition-all shadow-xs"
-                  >
-                    <Globe className="w-3.5 h-3.5" />
-                    <span>Project Link</span>
-                    <ExternalLink className="w-3 h-3 ml-0.5" />
-                  </a>
-                </div>
-              )}
             </div>
 
-            {/* Technologies / Stack Tags */}
+            {/* Tags */}
             {item.tags && item.tags.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 pt-2.5 mt-2.5 border-t border-slate-100">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
                   <Tag className="w-3 h-3 text-slate-400" />
-                  <span>Stack:</span>
+                  <span>Tags:</span>
                 </span>
                 {item.tags.map((tag) => (
                   <span
@@ -193,204 +164,20 @@ export default function PortfolioDetailModal({
               </div>
             )}
 
-            {/* YouTube Video Showcase */}
-            {item.media_type === "youtube" && item.media_url && (
-              <div className="bg-white rounded-2xl border border-red-200 overflow-hidden shadow-xs">
-                <div className="p-3 bg-red-50/50 border-b border-red-100 flex items-center justify-between text-xs font-bold text-red-700">
-                  <span className="flex items-center gap-1.5">
-                    <Youtube className="w-4 h-4 text-red-600" />
-                    <span>YouTube Video Showcase</span>
-                  </span>
-                  <a href={item.media_url} target="_blank" rel="noopener noreferrer" className="text-xs text-red-600 underline">
-                    Open in YouTube ↗
-                  </a>
-                </div>
-                <div className="aspect-video w-full bg-black">
-                  <iframe
-                    src={`https://www.youtube.com/embed/${item.media_url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/)?.[1] || ''}`}
-                    title={item.project_name}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="w-full h-full border-0"
-                  />
-                </div>
-              </div>
-            )}
-
             {/* Detailed Description */}
             {item.description && (
               <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Project Description &amp; Scope</h4>
-                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{item.description}</p>
+                <div
+                  className="text-sm text-slate-700 leading-relaxed prose prose-sm max-w-none [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_iframe]:w-full [&_iframe]:aspect-video [&_iframe]:rounded-xl [&_iframe]:my-4 [&_iframe]:shadow-md [&_iframe]:border-0"
+                  dangerouslySetInnerHTML={{ __html: embedYouTubeVideos(item.description) }}
+                />
               </div>
             )}
 
-            {/* Strategic Overview: Primary Challenge vs Primary Solution */}
-            {(item.primary_challenge || item.primary_solution) && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-1 bg-primary rounded-full" />
-                  <h3 className="text-xs font-black tracking-wider text-slate-800 uppercase">
-                    STRATEGIC CHALLENGE & ARCHITECTURAL SOLUTION
-                  </h3>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* Primary Problem */}
-                  <div className="bg-white rounded-2xl border border-red-200/90 p-5 sm:p-6 shadow-xs relative overflow-hidden flex flex-col justify-between space-y-2.5">
-                    <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500" />
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-bold text-red-600 uppercase tracking-wider">
-                        <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
-                        <span>The Problem Statement</span>
-                      </div>
-                      <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal whitespace-pre-wrap">
-                        {item.primary_challenge || "No primary challenge recorded."}
-                      </p>
-                    </div>
-                  </div>
 
-                  {/* Primary Solution */}
-                  <div className="bg-white rounded-2xl border border-emerald-200/90 p-5 sm:p-6 shadow-xs relative overflow-hidden flex flex-col justify-between space-y-2.5">
-                    <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500" />
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 uppercase tracking-wider">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>The Engineered Solution</span>
-                      </div>
-                      <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal whitespace-pre-wrap">
-                        {item.primary_solution || "No primary solution recorded."}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {/* Documented Technical Challenges */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-1 bg-primary rounded-full" />
-                  <h3 className="text-xs font-black tracking-wider text-slate-800 uppercase">
-                    TECHNICAL CHALLENGE BREAKDOWNS ({totalChallenges})
-                  </h3>
-                </div>
-                <span className="text-xs text-slate-400 font-medium">
-                  Detailed architectural challenge & solution analyses
-                </span>
-              </div>
-
-              {totalChallenges === 0 ? (
-                <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400">
-                  No individual challenge breakdown blocks have been recorded for this case study.
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  {item.challenges!.map((c, idx) => (
-                    <div
-                      key={c.id || idx}
-                      className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-4 hover:border-slate-300 transition-colors"
-                    >
-                      {/* Challenge Header */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-7 h-7 rounded-lg bg-sky-mist text-primary border border-primary/20 flex items-center justify-center text-xs font-bold shrink-0">
-                            {idx + 1}
-                          </span>
-                          <h4 className="text-sm sm:text-base font-bold text-slate-900">
-                            {c.title}
-                          </h4>
-                        </div>
-
-                        {c.supporting_image && (
-                          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                            <ImageIcon className="w-3 h-3 text-emerald-600" />
-                            <span>Architecture Visual Attached</span>
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Layout: If supporting_image exists -> Left: Challenges & Solution, Right: Image */}
-                      {c.supporting_image ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-                          {/* Left Column: Challenges and Solution */}
-                          <div className="lg:col-span-7 flex flex-col justify-between space-y-3.5">
-                            {/* Specific Challenge */}
-                            <div className="p-4 rounded-xl bg-red-50/60 border border-red-100 space-y-1.5 flex-1">
-                              <div className="flex items-center gap-1.5 text-xs font-bold text-red-600 uppercase tracking-wider">
-                                <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                                <span>Specific Challenge / Problem:</span>
-                              </div>
-                              <p className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">
-                                {c.challenge_description || "No challenge description specified."}
-                              </p>
-                            </div>
-
-                            {/* Delivered Solution */}
-                            <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100 space-y-1.5 flex-1">
-                              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                <span>Delivered Solution:</span>
-                              </div>
-                              <p className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">
-                                {c.solution_provided || "No solution provided."}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Right Column: Holds the Image */}
-                          <div className="lg:col-span-5 flex flex-col">
-                            <div
-                              onClick={() => setSelectedPreviewImage(c.supporting_image || null)}
-                              className="w-full h-full min-h-[220px] rounded-xl overflow-hidden border border-slate-200 bg-slate-950 relative group cursor-pointer flex items-center justify-center shadow-xs"
-                              title="Click to enlarge diagram"
-                            >
-                              <img
-                                src={c.supporting_image}
-                                alt={c.title}
-                                className="w-full h-full max-h-72 object-contain group-hover:scale-105 transition-transform duration-300"
-                              />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-semibold gap-1 backdrop-blur-xs">
-                                <ExternalLink className="w-4 h-4" />
-                                <span>Click to enlarge visual</span>
-                              </div>
-                              <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-medium backdrop-blur-xs flex items-center gap-1">
-                                <ImageIcon className="w-3 h-3 text-sky-400" />
-                                <span>Architecture Visual</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        /* When no supporting image: Side-by-side Challenge & Solution */
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="p-4 rounded-xl bg-red-50/60 border border-red-100 space-y-1.5">
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-red-600 uppercase tracking-wider">
-                              <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                              <span>Specific Challenge / Problem:</span>
-                            </div>
-                            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">
-                              {c.challenge_description || "N/A"}
-                            </p>
-                          </div>
-
-                          <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100 space-y-1.5">
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                              <span>Delivered Solution:</span>
-                            </div>
-                            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">
-                              {c.solution_provided || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
 
           {/* 3. Action Footer */}
@@ -405,18 +192,6 @@ export default function PortfolioDetailModal({
             </Button>
 
             <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
-              {item.live_url && (
-                <a
-                  href={item.live_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all shrink-0 whitespace-nowrap"
-                >
-                  <Globe className="w-3.5 h-3.5 text-primary" />
-                  <span>Project Link</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              )}
 
               {(
                 <Button

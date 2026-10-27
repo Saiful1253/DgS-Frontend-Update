@@ -1,14 +1,16 @@
+
 "use client";
 
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Layers, HelpCircle } from "lucide-react";
+import { Layers, HelpCircle, Wrench } from "lucide-react";
 
 const SERVICE_TABS = [
   { label: "All Services", href: "/services", icon: Layers },
   { label: "Why Choose Us", href: "/services/why-coose-us", icon: HelpCircle },
+  { label: "What We Do", href: "/services/what-we-do", icon: Wrench },
 ];
 
 export default function ServicesLayout({ children }: { children: React.ReactNode }) {

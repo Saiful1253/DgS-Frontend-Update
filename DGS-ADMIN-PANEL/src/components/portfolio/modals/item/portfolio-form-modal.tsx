@@ -9,21 +9,22 @@ import {
   Save,
   Loader2,
   UploadCloud,
-  ImageIcon,
   PlusCircle,
   AlertCircle,
   AlertTriangle,
   ChevronDown,
   FolderKanban,
-  Video,
   MapPin,
-  Youtube,
+  Check,
+  Search,
+  ExternalLink,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -42,19 +43,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { portfolioSchema } from "@/zod/portfolio.validation";
-import { PortfolioItem, PortfolioCategory } from "@/types/portfolio";
+import { PortfolioItem, PortfolioCategory, PortfolioArea } from "@/types/portfolio";
 import {
   savePortfolio,
   uploadPortfolioImage,
-  createPortfolioCategory,
+  createPortfolioArea,
+  listPortfolioAreas,
 } from "@/services/portfolio/portfolio.service";
+import { listServices } from "@/services/service/service.service";
 import { listBlogTags, createBlogTag } from "@/services/blog/blog.service";
 import OptionPicker, { PickerOption } from "@/components/blog/option-picker";
-import PortfolioCategoryModal from "../category/portfolio-category-modal";
+import PortfolioAreaModal from "../area/portfolio-area-modal";
+import CreateServiceModal from "@/components/services/modals/service/create-service-modal";
+import RichTextEditor from "@/components/common/rich-text-editor";
 import {
   BANGLADESH_DISTRICTS,
   COMMON_DHAKA_AREAS,
-  PROJECT_TYPES,
   PROJECT_STATUSES,
 } from "@/lib/bangladesh-locations";
 
@@ -65,27 +69,15 @@ interface FormSnapshot {
   category: string;
   cover_image: string;
   tags: string[];
-  live_url: string;
   app_store_url: string;
   is_featured: boolean;
-  media_type: "image" | "youtube";
-  media_url: string;
   project_status: "completed" | "ongoing";
-  project_type: "residential" | "industrial" | "commercial_restaurant";
   district: string;
   area: string;
   address: string;
   latitude: string;
   longitude: string;
   description: string;
-  primary_challenge: string;
-  primary_solution: string;
-  challenges: Array<{
-    title: string;
-    challenge_description: string;
-    solution_provided: string;
-    supporting_image: string;
-  }>;
 }
 
 export interface PortfolioFormModalProps {
@@ -119,46 +111,161 @@ export default function PortfolioFormModal({
   const [tags, setTags] = useState<string[]>([]);
   const [allTags, setAllTags] = useState<PickerOption[]>([]);
   const [loadingTags, setLoadingTags] = useState(false);
-  const [liveUrl, setLiveUrl] = useState("");
   const [appStoreUrl, setAppStoreUrl] = useState("");
   const [isFeatured, setIsFeatured] = useState<boolean>(false);
 
   // New Portfolio Engine Form State
-  const [mediaType, setMediaType] = useState<"image" | "youtube">("image");
-  const [mediaUrl, setMediaUrl] = useState("");
   const [projectStatus, setProjectStatus] = useState<"completed" | "ongoing">("completed");
-  const [projectType, setProjectType] = useState<
-    "residential" | "industrial" | "commercial_restaurant"
-  >("residential");
   const [district, setDistrict] = useState("Dhaka");
   const [area, setArea] = useState("");
   const [address, setAddress] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
+  const [coordinatesInput, setCoordinatesInput] = useState("");
   const [description, setDescription] = useState("");
-  const [allAreas, setAllAreas] = useState<string[]>(COMMON_DHAKA_AREAS);
+  const [areaObjects, setAreaObjects] = useState<PortfolioArea[]>([]);
+  const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
   const [isAddingAreaInline, setIsAddingAreaInline] = useState(false);
   const [newInlineArea, setNewInlineArea] = useState("");
+  const [addingAreaLoading, setAddingAreaLoading] = useState(false);
+  const [isAreaPickerOpen, setIsAreaPickerOpen] = useState(false);
+  const [areaSearchQuery, setAreaSearchQuery] = useState("");
 
-  const [primaryChallenge, setPrimaryChallenge] = useState("");
-  const [primarySolution, setPrimarySolution] = useState("");
-  const [challenges, setChallenges] = useState<
-    Array<{
-      id?: number;
-      title: string;
-      challenge_description: string;
-      solution_provided: string;
-      supporting_image: string;
-      imageFile?: File | null;
-      imagePreview?: string;
-    }>
-  >([]);
 
-  // Category Modal & Inline Add
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [isAddingCategoryInline, setIsAddingCategoryInline] = useState(false);
-  const [newInlineCategory, setNewInlineCategory] = useState("");
-  const [addingCategoryLoading, setAddingCategoryLoading] = useState(false);
+  // Category (Sourced dynamically from Services) & Searchable Picker
+  const [servicesAsCategories, setServicesAsCategories] = useState<PortfolioCategory[]>([]);
+  const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+  const [isCreateServiceOpen, setIsCreateServiceOpen] = useState(false);
+
+  const fetchServices = () => {
+    listServices({ limit: 100 })
+      .then((res) => {
+        if (res.success && res.data) {
+          const raw = res.data as any;
+          const items = Array.isArray(raw) ? raw : (Array.isArray(raw.data) ? raw.data : []);
+          if (items.length > 0) {
+            setServicesAsCategories(
+              items.map((s: any) => ({
+                id: s.id,
+                name: s.name,
+                slug: s.slug,
+              }))
+            );
+          }
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (open) {
+      fetchServices();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (isCategoryPickerOpen) {
+      fetchServices();
+    }
+  }, [isCategoryPickerOpen]);
+
+  const effectiveCategories = useMemo(() => {
+    if (servicesAsCategories.length > 0) return servicesAsCategories;
+    if (categories && categories.length > 0) return categories;
+    return [];
+  }, [servicesAsCategories, categories]);
+
+  const filteredCategories = useMemo(() => {
+    const q = categorySearchQuery.trim().toLowerCase();
+    if (!q) return effectiveCategories;
+    return effectiveCategories.filter((cat) => cat.name.toLowerCase().includes(q));
+  }, [effectiveCategories, categorySearchQuery]);
+
+  const handleSelectCategory = (catName: string) => {
+    const cleanName = catName.trim();
+    if (!cleanName) return;
+    setCategory(cleanName);
+    clearError("category");
+    setIsCategoryPickerOpen(false);
+    setCategorySearchQuery("");
+  };
+
+  // Area Modal & Searchable Picker computations
+  useEffect(() => {
+    if (open) {
+      listPortfolioAreas(1, 100)
+        .then((res) => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            setAreaObjects(res.data);
+          } else {
+            setAreaObjects(COMMON_DHAKA_AREAS.map((name, idx) => ({ id: idx + 1, name })));
+          }
+        })
+        .catch(() => {
+          setAreaObjects(COMMON_DHAKA_AREAS.map((name, idx) => ({ id: idx + 1, name })));
+        });
+    }
+  }, [open]);
+
+  const effectiveAreas = useMemo(() => {
+    if (areaObjects.length > 0) return areaObjects;
+    return COMMON_DHAKA_AREAS.map((name, idx) => ({ id: idx + 1, name }));
+  }, [areaObjects]);
+
+  const filteredAreas = useMemo(() => {
+    const q = areaSearchQuery.trim().toLowerCase();
+    if (!q) return effectiveAreas;
+    return effectiveAreas.filter((a) => a.name.toLowerCase().includes(q));
+  }, [effectiveAreas, areaSearchQuery]);
+
+  const exactAreaMatch = useMemo(() => {
+    const q = areaSearchQuery.trim().toLowerCase();
+    if (!q) return false;
+    return effectiveAreas.some((a) => a.name.toLowerCase() === q);
+  }, [effectiveAreas, areaSearchQuery]);
+
+  const handleSelectArea = (areaName: string) => {
+    const cleanName = areaName.trim();
+    if (!cleanName) return;
+    setArea(cleanName);
+    setIsAreaPickerOpen(false);
+    setAreaSearchQuery("");
+
+    if (!areaObjects.some((a) => a.name.toLowerCase() === cleanName.toLowerCase())) {
+      const newAreaItem: PortfolioArea = { id: Date.now(), name: cleanName };
+      setAreaObjects((prev) => [newAreaItem, ...prev]);
+      createPortfolioArea(cleanName).catch(() => {});
+    }
+  };
+
+  const handleCreateInlineArea = async () => {
+    const trimmed = newInlineArea.trim();
+    if (!trimmed) return;
+    setAddingAreaLoading(true);
+    try {
+      const res = await createPortfolioArea(trimmed);
+      if (res.success && res.data) {
+        toast.success(res.message || "Area created");
+        const createdArea: PortfolioArea = res.data;
+        setAreaObjects((prev) => {
+          if (!prev.some((a) => a.id === createdArea.id || a.name.toLowerCase() === createdArea.name.toLowerCase())) {
+            return [createdArea, ...prev];
+          }
+          return prev;
+        });
+        setArea(createdArea.name);
+        setIsAddingAreaInline(false);
+        setNewInlineArea("");
+      } else {
+        toast.error(res.message || "Failed to create area");
+      }
+    } catch {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setAddingAreaLoading(false);
+    }
+  };
 
   // Field validation & save status
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -235,15 +342,11 @@ export default function PortfolioFormModal({
       setCoverFile(null);
       setCoverPreview("");
       setTags(project.tags || []);
-      setLiveUrl(project.live_url || "");
       setAppStoreUrl(project.app_store_url || "");
       setIsFeatured(Boolean(project.is_featured));
 
       // New Portfolio Engine values
-      setMediaType(project.media_type || "image");
-      setMediaUrl(project.media_url || "");
       setProjectStatus(project.project_status || "completed");
-      setProjectType(project.project_type || "residential");
       
       const rawAddr = project.address || "";
       setAddress(rawAddr);
@@ -265,23 +368,12 @@ export default function PortfolioFormModal({
       }
       setArea(matchedArea);
 
-      setLatitude(project.latitude !== undefined && project.latitude !== null ? String(project.latitude) : "");
-      setLongitude(project.longitude !== undefined && project.longitude !== null ? String(project.longitude) : "");
+      const latStr = project.latitude !== undefined && project.latitude !== null ? String(project.latitude) : "";
+      const lngStr = project.longitude !== undefined && project.longitude !== null ? String(project.longitude) : "";
+      setLatitude(latStr);
+      setLongitude(lngStr);
+      setCoordinatesInput(latStr && lngStr ? `${latStr}, ${lngStr}` : latStr || lngStr || "");
       setDescription(project.description || "");
-
-      setPrimaryChallenge(project.primary_challenge || "");
-      setPrimarySolution(project.primary_solution || "");
-      setChallenges(
-        project.challenges?.map((c) => ({
-          id: c.id,
-          title: c.title || "",
-          challenge_description: c.challenge_description || "",
-          solution_provided: c.solution_provided || "",
-          supporting_image: c.supporting_image || "",
-          imageFile: null,
-          imagePreview: "",
-        })) || []
-      );
       setOriginalSnapshot({
         project_name: project.project_name || "",
         slug: project.slug?.startsWith("/portfolio/")
@@ -291,27 +383,15 @@ export default function PortfolioFormModal({
         category: project.category || "Select category",
         cover_image: project.cover_image || "",
         tags: project.tags || [],
-        live_url: project.live_url || "",
         app_store_url: project.app_store_url || "",
         is_featured: Boolean(project.is_featured),
-        media_type: project.media_type || "image",
-        media_url: project.media_url || "",
         project_status: project.project_status || "completed",
-        project_type: project.project_type || "residential",
         district: matchedDist,
         area: matchedArea,
         address: rawAddr,
         latitude: project.latitude !== undefined && project.latitude !== null ? String(project.latitude) : "",
         longitude: project.longitude !== undefined && project.longitude !== null ? String(project.longitude) : "",
         description: project.description || "",
-        primary_challenge: project.primary_challenge || "",
-        primary_solution: project.primary_solution || "",
-        challenges: (project.challenges || []).map((c) => ({
-          title: c.title || "",
-          challenge_description: c.challenge_description || "",
-          solution_provided: c.solution_provided || "",
-          supporting_image: c.supporting_image || "",
-        })),
       });
     } else {
       setEditingId(null);
@@ -323,31 +403,16 @@ export default function PortfolioFormModal({
       setCoverFile(null);
       setCoverPreview("");
       setTags([]);
-      setLiveUrl("");
       setAppStoreUrl("");
       setIsFeatured(false);
-      setMediaType("image");
-      setMediaUrl("");
       setProjectStatus("completed");
-      setProjectType("residential");
       setDistrict("Dhaka");
       setArea("");
       setAddress("");
       setLatitude("");
       setLongitude("");
+      setCoordinatesInput("");
       setDescription("");
-      setPrimaryChallenge("");
-      setPrimarySolution("");
-      setChallenges([
-        {
-          title: "Challenge #1",
-          challenge_description: "",
-          solution_provided: "",
-          supporting_image: "",
-          imageFile: null,
-          imagePreview: "",
-        },
-      ]);
       setOriginalSnapshot(null);
     }
   }, [open, project]);
@@ -362,22 +427,12 @@ export default function PortfolioFormModal({
           coverImage ||
           (category && category !== "Select category") ||
           tags.length > 0 ||
-          liveUrl.trim() ||
           appStoreUrl.trim() ||
-          mediaUrl.trim() ||
           description.trim() ||
-          address.trim() ||
-          primaryChallenge.trim() ||
-          primarySolution.trim()
+          address.trim()
       );
     }
     if (!originalSnapshot) return false;
-    const currentChallenges = challenges.map((c) => ({
-      title: c.title.trim(),
-      challenge_description: c.challenge_description?.trim() || "",
-      solution_provided: c.solution_provided?.trim() || "",
-      supporting_image: c.supporting_image?.trim() || "",
-    }));
     return (
       projectName.trim() !== originalSnapshot.project_name.trim() ||
       slug.trim() !== originalSnapshot.slug.trim() ||
@@ -385,20 +440,13 @@ export default function PortfolioFormModal({
       category !== originalSnapshot.category ||
       (coverFile !== null || coverImage.trim() !== originalSnapshot.cover_image.trim()) ||
       JSON.stringify(tags) !== JSON.stringify(originalSnapshot.tags) ||
-      liveUrl.trim() !== originalSnapshot.live_url.trim() ||
       appStoreUrl.trim() !== originalSnapshot.app_store_url.trim() ||
       isFeatured !== originalSnapshot.is_featured ||
-      mediaType !== originalSnapshot.media_type ||
-      mediaUrl.trim() !== originalSnapshot.media_url.trim() ||
       projectStatus !== originalSnapshot.project_status ||
-      projectType !== originalSnapshot.project_type ||
       address.trim() !== originalSnapshot.address.trim() ||
       latitude.trim() !== originalSnapshot.latitude.trim() ||
       longitude.trim() !== originalSnapshot.longitude.trim() ||
-      description.trim() !== originalSnapshot.description.trim() ||
-      primaryChallenge.trim() !== originalSnapshot.primary_challenge.trim() ||
-      primarySolution.trim() !== originalSnapshot.primary_solution.trim() ||
-      JSON.stringify(currentChallenges) !== JSON.stringify(originalSnapshot.challenges)
+      description.trim() !== originalSnapshot.description.trim()
     );
   }, [
     modalMode,
@@ -409,12 +457,13 @@ export default function PortfolioFormModal({
     coverFile,
     coverImage,
     tags,
-    liveUrl,
     appStoreUrl,
     isFeatured,
-    primaryChallenge,
-    primarySolution,
-    challenges,
+    projectStatus,
+    address,
+    latitude,
+    longitude,
+    description,
     originalSnapshot,
   ]);
 
@@ -439,6 +488,24 @@ export default function PortfolioFormModal({
     }
   };
 
+  const handleCoordinatesChange = (val: string) => {
+    setCoordinatesInput(val);
+    const clean = val.replace(/[()]/g, "").trim();
+    if (!clean) {
+      setLatitude("");
+      setLongitude("");
+    } else if (clean.includes(",")) {
+      const parts = clean.split(",");
+      setLatitude(parts[0]?.trim() || "");
+      setLongitude(parts.slice(1).join(",").trim());
+    } else {
+      setLatitude(clean);
+      setLongitude("");
+    }
+    clearError("latitude");
+    clearError("longitude");
+  };
+
 
 
   // Main Cover Image Handlers
@@ -461,91 +528,8 @@ export default function PortfolioFormModal({
     setCoverImage("");
   };
 
-  // Secondary Challenges Handlers
-  const handleAddChallenge = () => {
-    setChallenges([
-      ...challenges,
-      {
-        title: `Challenge #${challenges.length + 1}`,
-        challenge_description: "",
-        solution_provided: "",
-        supporting_image: "",
-        imageFile: null,
-        imagePreview: "",
-      },
-    ]);
-  };
 
-  const handleRemoveChallenge = (idx: number) => {
-    setChallenges(challenges.filter((_, i) => i !== idx));
-  };
 
-  const handleChallengeChange = (
-    idx: number,
-    field: "title" | "challenge_description" | "solution_provided",
-    value: string
-  ) => {
-    const updated = [...challenges];
-    updated[idx] = { ...updated[idx], [field]: value };
-    setChallenges(updated);
-  };
-
-  const handleChallengeImageChange = (
-    idx: number,
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        toast.error("Please select a valid image file");
-        return;
-      }
-      const updated = [...challenges];
-      updated[idx] = {
-        ...updated[idx],
-        imageFile: file,
-        imagePreview: URL.createObjectURL(file),
-      };
-      setChallenges(updated);
-      clearError(`challenges.${idx}.supporting_image`);
-    }
-  };
-
-  const handleRemoveChallengeImage = (idx: number) => {
-    const updated = [...challenges];
-    updated[idx] = {
-      ...updated[idx],
-      imageFile: null,
-      imagePreview: "",
-      supporting_image: "",
-    };
-    setChallenges(updated);
-  };
-
-  // Create Category Inline
-  const handleCreateInlineCategory = async () => {
-    const trimmed = newInlineCategory.trim();
-    if (!trimmed) return;
-    setAddingCategoryLoading(true);
-    try {
-      const res = await createPortfolioCategory(trimmed);
-      if (res.success && res.data) {
-        toast.success(res.message || "Category created");
-        const updated = [...categories, res.data];
-        onCategoriesChange?.(updated);
-        setCategory(res.data.name);
-        setIsAddingCategoryInline(false);
-        setNewInlineCategory("");
-        clearError("category");
-      } else {
-        toast.error(res.message || "Failed to create category");
-      }
-    } catch {
-      toast.error("An unexpected error occurred");
-    } finally {
-      setAddingCategoryLoading(false);
-    }
-  };
 
   // Save Portfolio Project
   const handleSave = async () => {
@@ -568,27 +552,15 @@ export default function PortfolioFormModal({
       category: category.trim(),
       cover_image: (coverFile ? "staged_cover" : (coverImage || "")).trim(),
       tags,
-      live_url: liveUrl.trim(),
       app_store_url: appStoreUrl.trim(),
       is_featured: isFeatured,
-      media_type: mediaType,
-      media_url: mediaType === "youtube" ? mediaUrl.trim() : "",
+      media_type: "image" as const,
+      media_url: "",
       project_status: projectStatus,
-      project_type: projectType,
       address: finalAddress,
       latitude: latitude ? Number(latitude) : null,
       longitude: longitude ? Number(longitude) : null,
       description: description.trim(),
-      primary_challenge: primaryChallenge.trim(),
-      primary_solution: primarySolution.trim(),
-      challenges: challenges.map((c, i) => ({
-        id: c.id,
-        title: c.title.trim(),
-        challenge_description: c.challenge_description?.trim() || "",
-        solution_provided: c.solution_provided?.trim() || "",
-        supporting_image: (c.imageFile ? "staged_diagram" : (c.supporting_image || "")).trim(),
-        sort_order: i + 1,
-      })),
     };
 
     const parsed = portfolioSchema.safeParse(tentativePayload);
@@ -630,30 +602,6 @@ export default function PortfolioFormModal({
         finalCoverUrl = uploadRes.data.url;
       }
 
-      const processedChallenges = await Promise.all(
-        challenges.map(async (c, i) => {
-          let finalChallengeImg = c.supporting_image;
-          if (c.imageFile) {
-            const challengeFormData = new FormData();
-            challengeFormData.append("file", c.imageFile);
-            challengeFormData.append("folder", "portfolio/challenges");
-            const uploadRes = await uploadPortfolioImage(challengeFormData);
-            if (!uploadRes.success || !uploadRes.data?.url) {
-              throw new Error(`Failed to upload diagram for Challenge #${i + 1}`);
-            }
-            finalChallengeImg = uploadRes.data.url;
-          }
-          return {
-            id: c.id,
-            title: c.title.trim(),
-            challenge_description: c.challenge_description?.trim() || "",
-            solution_provided: c.solution_provided?.trim() || "",
-            supporting_image: finalChallengeImg?.trim() || undefined,
-            sort_order: i + 1,
-          };
-        })
-      );
-
       const payload = {
         id: editingId || undefined,
         project_name: projectName.trim(),
@@ -662,20 +610,15 @@ export default function PortfolioFormModal({
         category: category.trim(),
         cover_image: finalCoverUrl?.trim() || undefined,
         tags,
-        live_url: liveUrl.trim(),
         app_store_url: appStoreUrl.trim(),
         is_featured: isFeatured,
-        media_type: mediaType,
-        media_url: mediaType === "youtube" ? mediaUrl.trim() : undefined,
+        media_type: "image" as const,
+        media_url: undefined,
         project_status: projectStatus,
-        project_type: projectType,
         address: finalAddress || undefined,
         latitude: latitude ? Number(latitude) : null,
         longitude: longitude ? Number(longitude) : null,
         description: description.trim() || undefined,
-        primary_challenge: primaryChallenge.trim(),
-        primary_solution: primarySolution.trim(),
-        challenges: processedChallenges,
       };
 
       const res = await savePortfolio(payload);
@@ -741,8 +684,7 @@ export default function PortfolioFormModal({
                 : `Update "${projectName || "Case Study"}"`}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
-              Configure showcase project information, required cover visual, architectural challenge
-              breakdown, and technical stack tags.
+              Configure showcase project information, required cover visual, rich text description, and tags.
             </DialogDescription>
           </DialogHeader>
 
@@ -765,74 +707,6 @@ export default function PortfolioFormModal({
               </div>
             )}
 
-            {/* Media Engine Section */}
-            <div className="space-y-3 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
-              <label className="text-xs font-bold tracking-wider text-slate-700 uppercase flex items-center justify-between">
-                <span>MEDIA TYPE (SHOWCASE FORMAT)</span>
-                <span className="text-[10px] font-semibold text-primary">Image Showcase or YouTube Video</span>
-              </label>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMediaType("image");
-                    clearError("media_url");
-                  }}
-                  className={cn(
-                    "flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border text-xs font-bold transition-all cursor-pointer",
-                    mediaType === "image"
-                      ? "bg-white border-primary text-primary shadow-xs ring-2 ring-primary/20"
-                      : "bg-white/60 border-slate-200 text-slate-600 hover:bg-white"
-                  )}
-                >
-                  <ImageIcon className="w-4 h-4" />
-                  <span>Image Showcase</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMediaType("youtube")}
-                  className={cn(
-                    "flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border text-xs font-bold transition-all cursor-pointer",
-                    mediaType === "youtube"
-                      ? "bg-white border-red-500 text-red-600 shadow-xs ring-2 ring-red-500/20"
-                      : "bg-white/60 border-slate-200 text-slate-600 hover:bg-white"
-                  )}
-                >
-                  <Youtube className="w-4 h-4 text-red-500" />
-                  <span>YouTube Video</span>
-                </button>
-              </div>
-
-              {mediaType === "youtube" && (
-                <div className="space-y-1.5 pt-1">
-                  <label className="text-xs font-bold tracking-wider text-slate-700 uppercase flex items-center justify-between">
-                    <span>
-                      YOUTUBE VIDEO URL <span className="text-red-500">*</span>
-                    </span>
-                    <span className="text-[10px] font-normal text-slate-400">e.g. https://www.youtube.com/watch?v=...</span>
-                  </label>
-                  <Input
-                    value={mediaUrl}
-                    onChange={(e) => {
-                      setMediaUrl(e.target.value);
-                      clearError("media_url");
-                    }}
-                    placeholder="https://www.youtube.com/watch?v=XXXXXXXX"
-                    className={cn(
-                      "h-10 text-sm font-medium",
-                      fieldErrors.media_url && "border-red-500 focus-visible:ring-red-500/20"
-                    )}
-                  />
-                  {fieldErrors.media_url && (
-                    <p className="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      <span>{fieldErrors.media_url}</span>
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* Section 0: Primary Cover Visual */}
             <div className="space-y-2">
@@ -988,56 +862,40 @@ export default function PortfolioFormModal({
                 </div>
               </div>
 
-              {/* Row: Status & Type */}
+              {/* Row 2: Status & Client Name */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
                     PROJECT STATUS <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {PROJECT_STATUSES.map((st) => (
-                      <button
-                        key={st.value}
-                        type="button"
-                        onClick={() => setProjectStatus(st.value)}
-                        className={cn(
-                          "py-2 px-3 rounded-lg border text-xs font-bold transition-all cursor-pointer",
-                          projectStatus === st.value
-                            ? st.value === "completed"
-                              ? "bg-emerald-50 border-emerald-500 text-emerald-700 ring-2 ring-emerald-500/20 shadow-xs"
-                              : "bg-amber-50 border-amber-500 text-amber-700 ring-2 ring-amber-500/20 shadow-xs"
-                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                        )}
-                      >
-                        {st.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-                    PROJECT TYPE <span className="text-red-500">*</span>
-                  </label>
                   <div className="relative">
                     <select
-                      value={projectType}
-                      onChange={(e) => setProjectType(e.target.value as any)}
-                      className="w-full h-10 pl-3.5 pr-10 rounded-md border border-input bg-white text-sm font-semibold text-slate-800 shadow-xs appearance-none focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+                      value={projectStatus}
+                      onChange={(e) => {
+                        setProjectStatus(e.target.value as "completed" | "ongoing");
+                        clearError("project_status");
+                      }}
+                      className={cn(
+                        "w-full h-10 pl-3.5 pr-10 rounded-md border border-input bg-white text-sm font-medium text-slate-800 shadow-xs appearance-none focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer",
+                        fieldErrors.project_status && "border-red-500 focus-visible:ring-red-500/20"
+                      )}
                     >
-                      {PROJECT_TYPES.map((pt) => (
-                        <option key={pt.value} value={pt.value}>
-                          {pt.label}
+                      {PROJECT_STATUSES.map((st) => (
+                        <option key={st.value} value={st.value}>
+                          {st.label}
                         </option>
                       ))}
                     </select>
                     <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
+                  {fieldErrors.project_status && (
+                    <p className="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{fieldErrors.project_status}</span>
+                    </p>
+                  )}
                 </div>
-              </div>
 
-              {/* Row 2 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
                     CLIENT NAME
@@ -1061,123 +919,137 @@ export default function PortfolioFormModal({
                     </p>
                   )}
                 </div>
+              </div>
 
+              {/* Row 3: Category & Featured Status (Side by Side) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                {/* Category Selector (Sourced from Services) */}
+                {/* Service Selector (Sourced strictly from Services /services) */}
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between h-6">
                     <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
                       CATEGORY SELECTOR <span className="text-red-500">*</span>
                     </label>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setIsAddingCategoryInline(!isAddingCategoryInline);
-                          setNewInlineCategory("");
-                        }}
-                        className="h-6 text-[10px] gap-1 px-1.5 text-primary hover:text-primary/90 hover:bg-sky-50 font-semibold"
-                      >
-                        <PlusCircle className="w-3.5 h-3.5" />
-                        <span>{isAddingCategoryInline ? "Choose Existing" : "Add New"}</span>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsCategoryModalOpen(true)}
-                        className="h-6 text-[10px] gap-1 px-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-medium"
-                        title="Manage Categories"
-                      >
-                        <FolderKanban className="w-3.5 h-3.5" />
-                        <span>Manage</span>
-                      </Button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateServiceOpen(true)}
+                      className="h-6 text-[10px] gap-1 px-2 text-primary hover:text-primary/90 hover:bg-sky-50 font-semibold flex items-center rounded-md border border-primary/20 hover:border-primary/40 cursor-pointer transition-colors"
+                      title="Open Add Service Modal"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>Add Service</span>
+                    </button>
                   </div>
 
-                  {isAddingCategoryInline ? (
-                    <div className="flex items-center gap-1.5">
-                      <Input
-                        value={newInlineCategory}
-                        onChange={(e) => setNewInlineCategory(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleCreateInlineCategory();
-                          } else if (e.key === "Escape") {
-                            setIsAddingCategoryInline(false);
-                          }
-                        }}
-                        placeholder="Enter new category name..."
-                        className="h-10 text-sm font-medium flex-1"
-                        autoFocus
-                      />
-                      <Button
+                  <Popover open={isCategoryPickerOpen} onOpenChange={setIsCategoryPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <button
                         type="button"
-                        size="sm"
-                        onClick={handleCreateInlineCategory}
-                        disabled={addingCategoryLoading || !newInlineCategory.trim()}
-                        className="h-10 px-3 bg-primary text-white hover:bg-primary/90 font-bold text-xs shrink-0"
-                      >
-                        {addingCategoryLoading ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          "Save"
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsAddingCategoryInline(false)}
-                        className="h-10 px-2.5 text-slate-500 hover:text-slate-800 shrink-0"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      <select
-                        value={category || "Select category"}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === "__add_new_inline__") {
-                            setIsAddingCategoryInline(true);
-                          } else {
-                            setCategory(val);
-                            if (val && val.toLowerCase() !== "select category") {
-                              clearError("category");
-                            } else {
-                              setFieldErrors((prev) => ({
-                                ...prev,
-                                category: "Please select a category",
-                              }));
-                            }
-                          }
-                        }}
                         className={cn(
-                          "w-full h-10 pl-3.5 pr-12 rounded-md border border-input bg-white text-sm font-medium shadow-xs appearance-none focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer",
-                          !category || category.toLowerCase() === "select category"
+                          "w-full h-10 px-3.5 rounded-md border border-input bg-white text-sm font-medium shadow-xs flex items-center justify-between text-left focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer",
+                          !category ||
+                            category.toLowerCase() === "select category" ||
+                            category.toLowerCase() === "select service"
                             ? "text-slate-400"
-                            : "text-slate-800",
+                            : "text-slate-800 font-semibold",
                           fieldErrors.category &&
                             "border-red-500 focus:border-red-500 focus:ring-red-500/20"
                         )}
                       >
-                        <option value="Select category" className="text-slate-400 font-normal">
-                          Select category
-                        </option>
-                        {categories.map((cat) => (
-                          <option key={cat.id || cat.name} value={cat.name} className="text-slate-800">
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 flex items-center">
-                        <ChevronDown className="w-4 h-4" />
+                        <span className="truncate">
+                          {category &&
+                          category.toLowerCase() !== "select category" &&
+                          category.toLowerCase() !== "select service"
+                            ? category
+                            : "Select category"}
+                        </span>
+                        <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="start"
+                      sideOffset={6}
+                      collisionPadding={16}
+                      onWheel={(e) => e.stopPropagation()}
+                      className="w-[calc(100vw-4rem)] sm:w-[var(--radix-popover-trigger-width)] max-w-full p-2.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 space-y-2 max-h-[var(--radix-popover-content-available-height,85vh)]"
+                    >
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          value={categorySearchQuery}
+                          onChange={(e) => setCategorySearchQuery(e.target.value)}
+                          placeholder="Type to search services..."
+                          className="w-full h-8.5 pl-8 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:border-primary focus:bg-white transition-all font-medium text-slate-800"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && filteredCategories.length > 0) {
+                              e.preventDefault();
+                              handleSelectCategory(filteredCategories[0].name);
+                            }
+                          }}
+                        />
                       </div>
-                    </div>
-                  )}
+
+                      <div className="max-h-60 overflow-y-auto space-y-1 p-1 overscroll-contain">
+                        {filteredCategories.length === 0 ? (
+                          <div className="py-4 px-3 text-center space-y-2">
+                            <p className="text-xs text-slate-500 font-medium">
+                              No services found.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsCategoryPickerOpen(false);
+                                setIsCreateServiceOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-primary bg-sky-50 hover:bg-sky-100 rounded-md transition-colors cursor-pointer"
+                            >
+                              <PlusCircle className="w-3.5 h-3.5" />
+                              <span>Add Service</span>
+                            </button>
+                          </div>
+                        ) : (
+                          filteredCategories.map((cat) => {
+                            const isSelected =
+                              category.toLowerCase() === cat.name.toLowerCase();
+                            return (
+                              <button
+                                key={cat.id || cat.name}
+                                type="button"
+                                onClick={() => handleSelectCategory(cat.name)}
+                                className={cn(
+                                  "w-full px-2.5 py-2 rounded-lg text-xs font-semibold flex items-center justify-between text-left transition-colors cursor-pointer",
+                                  isSelected
+                                    ? "bg-primary/10 text-primary font-bold"
+                                    : "text-slate-700 hover:bg-slate-100"
+                                )}
+                              >
+                                <span className="truncate">{cat.name}</span>
+                                {isSelected && (
+                                  <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                                )}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 px-1">
+                        <span>Need a new service?</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCategoryPickerOpen(false);
+                            setIsCreateServiceOpen(true);
+                          }}
+                          className="text-primary hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <PlusCircle className="w-3 h-3" />
+                          <span>Add Service</span>
+                        </button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   {fieldErrors.category && (
                     <p className="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -1185,9 +1057,53 @@ export default function PortfolioFormModal({
                     </p>
                   )}
                 </div>
+
+                {/* Featured Status (Follows Testimonial Card Design) */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between h-6">
+                    <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+                      HOMEPAGE VISIBILITY
+                    </label>
+                    <span className="text-[10px] font-medium text-slate-400">
+                      Public Carousel
+                    </span>
+                  </div>
+                  <div
+                    className={cn(
+                      "h-10 px-3.5 rounded-md border transition-all flex items-center justify-between gap-3",
+                      isFeatured
+                        ? "bg-amber-50/70 border-amber-200"
+                        : "bg-slate-50 border-slate-200"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Label
+                        htmlFor="modal-is-featured"
+                        className="text-xs font-bold text-slate-900 cursor-pointer truncate"
+                      >
+                        Feature in Public Showcase
+                      </Label>
+                      <span
+                        className={cn(
+                          "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0",
+                          isFeatured
+                            ? "bg-amber-200/90 text-amber-900"
+                            : "bg-slate-200 text-slate-600"
+                        )}
+                      >
+                        {isFeatured ? "Featured" : "Standard"}
+                      </span>
+                    </div>
+                    <Switch
+                      id="modal-is-featured"
+                      checked={isFeatured}
+                      onCheckedChange={(c) => setIsFeatured(Boolean(c))}
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Row 3: Tags */}
+              {/* Row 4: Tags */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
@@ -1208,34 +1124,6 @@ export default function PortfolioFormModal({
                   emptyText={loadingTags ? "Loading tags..." : "No matching tags found."}
                 />
               </div>
-
-              {/* Row 4: Project Live Link */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-                  LIVE SITE / PROJECT LINK (OPTIONAL)
-                </label>
-                <Input
-                  value={liveUrl}
-                  onChange={(e) => setLiveUrl(e.target.value)}
-                  placeholder="https://example.com/project"
-                  className="h-10 text-sm font-medium"
-                />
-              </div>
-
-              {/* Featured toggle */}
-              <div className="flex items-center gap-2.5 pt-1">
-                <Checkbox
-                  id="modal-featured-status"
-                  checked={isFeatured}
-                  onCheckedChange={(c) => setIsFeatured(Boolean(c))}
-                />
-                <label
-                  htmlFor="modal-featured-status"
-                  className="text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer select-none"
-                >
-                  FEATURED STATUS (TOGGLE ON/OFF FOR HOMEPAGE VISIBILITY)
-                </label>
-              </div>
             </div>
 
             {/* Section: Location & Coverage */}
@@ -1250,9 +1138,11 @@ export default function PortfolioFormModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* District Dropdown */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-                    DISTRICT (BANGLADESH)
-                  </label>
+                  <div className="flex items-center justify-between h-6">
+                    <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+                      DISTRICT (BANGLADESH)
+                    </label>
+                  </div>
                   <div className="relative">
                     <select
                       value={district}
@@ -1269,19 +1159,38 @@ export default function PortfolioFormModal({
                   </div>
                 </div>
 
-                {/* Area Dropdown with inline Add */}
+                {/* Area Combobox with inline Add and Manage Modal */}
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between h-6">
                     <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
                       AREA / ZONE
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingAreaInline(!isAddingAreaInline)}
-                      className="text-[10px] font-semibold text-primary hover:underline cursor-pointer"
-                    >
-                      {isAddingAreaInline ? "Pick from list" : "+ Add new area"}
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setIsAddingAreaInline(!isAddingAreaInline);
+                          setNewInlineArea("");
+                        }}
+                        className="h-6 text-[10px] gap-1 px-1.5 text-primary hover:text-primary/90 hover:bg-sky-50 font-semibold cursor-pointer"
+                      >
+                        <PlusCircle className="w-3.5 h-3.5" />
+                        <span>{isAddingAreaInline ? "Choose Existing" : "Add New"}</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsAreaModalOpen(true)}
+                        className="h-6 text-[10px] gap-1 px-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-medium cursor-pointer"
+                        title="Manage Areas / Zones"
+                      >
+                        <FolderKanban className="w-3.5 h-3.5" />
+                        <span>Manage</span>
+                      </Button>
+                    </div>
                   </div>
 
                   {isAddingAreaInline ? (
@@ -1289,52 +1198,128 @@ export default function PortfolioFormModal({
                       <Input
                         value={newInlineArea}
                         onChange={(e) => setNewInlineArea(e.target.value)}
-                        placeholder="Type custom area name..."
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleCreateInlineArea();
+                          } else if (e.key === "Escape") {
+                            setIsAddingAreaInline(false);
+                          }
+                        }}
+                        placeholder="Enter new area / zone name..."
                         className="h-10 text-sm font-medium flex-1"
                         autoFocus
                       />
                       <Button
                         type="button"
                         size="sm"
-                        onClick={() => {
-                          const trimmed = newInlineArea.trim();
-                          if (trimmed) {
-                            if (!allAreas.includes(trimmed)) {
-                              setAllAreas((prev) => [trimmed, ...prev]);
-                            }
-                            setArea(trimmed);
-                            setIsAddingAreaInline(false);
-                            setNewInlineArea("");
-                          }
-                        }}
-                        className="h-10 px-3 bg-primary text-white font-bold text-xs"
+                        onClick={handleCreateInlineArea}
+                        disabled={addingAreaLoading || !newInlineArea.trim()}
+                        className="h-10 px-3 bg-primary text-white hover:bg-primary/90 font-bold text-xs shrink-0 cursor-pointer"
                       >
-                        Use
+                        {addingAreaLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "Save"
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsAddingAreaInline(false)}
+                        className="h-10 px-2.5 text-slate-500 hover:text-slate-800 shrink-0 cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
                       </Button>
                     </div>
                   ) : (
-                    <div className="relative">
-                      <select
-                        value={area}
-                        onChange={(e) => {
-                          if (e.target.value === "__custom__") {
-                            setIsAddingAreaInline(true);
-                          } else {
-                            setArea(e.target.value);
-                          }
-                        }}
-                        className="w-full h-10 pl-3.5 pr-10 rounded-md border border-input bg-white text-sm font-medium text-slate-800 shadow-xs appearance-none focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+                    <Popover open={isAreaPickerOpen} onOpenChange={setIsAreaPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className={cn(
+                            "w-full h-10 px-3.5 rounded-md border border-input bg-white text-sm font-medium shadow-xs flex items-center justify-between text-left focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer",
+                            !area
+                              ? "text-slate-400"
+                              : "text-slate-800 font-semibold"
+                          )}
+                        >
+                          <span className="truncate">
+                            {area ? area : "Select Area (or click + Add)"}
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="start"
+                        sideOffset={6}
+                        collisionPadding={16}
+                        onWheel={(e) => e.stopPropagation()}
+                        className="w-[calc(100vw-4rem)] sm:w-[var(--radix-popover-trigger-width)] max-w-full p-2.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 space-y-2 max-h-[var(--radix-popover-content-available-height,85vh)]"
                       >
-                        <option value="">Select Area (or click + Add)</option>
-                        {allAreas.map((a) => (
-                          <option key={a} value={a}>
-                            {a}
-                          </option>
-                        ))}
-                        <option value="__custom__">+ Add Custom Area...</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
+                        <div className="relative">
+                          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <input
+                            value={areaSearchQuery}
+                            onChange={(e) => setAreaSearchQuery(e.target.value)}
+                            placeholder="Type to search or enter new area..."
+                            className="w-full h-8.5 pl-8 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:border-primary focus:bg-white transition-all font-medium text-slate-800"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && areaSearchQuery.trim()) {
+                                e.preventDefault();
+                                handleSelectArea(areaSearchQuery.trim());
+                              }
+                            }}
+                          />
+                        </div>
+
+                        <div className="max-h-72 overflow-y-auto space-y-1 p-1 pb-2 overscroll-contain">
+                          {filteredAreas.length === 0 && !areaSearchQuery.trim() ? (
+                            <p className="text-xs text-slate-400 text-center py-3">
+                              No areas found.
+                            </p>
+                          ) : (
+                            filteredAreas.map((aItem) => {
+                              const isSelected =
+                                area.toLowerCase() === aItem.name.toLowerCase();
+                              return (
+                                <button
+                                  key={aItem.id || aItem.name}
+                                  type="button"
+                                  onClick={() => handleSelectArea(aItem.name)}
+                                  className={cn(
+                                    "w-full px-2.5 py-2 rounded-lg text-xs font-semibold flex items-center justify-between text-left transition-colors cursor-pointer",
+                                    isSelected
+                                      ? "bg-primary/10 text-primary font-bold"
+                                      : "text-slate-700 hover:bg-slate-100"
+                                  )}
+                                >
+                                  <span className="truncate">{aItem.name}</span>
+                                  {isSelected && (
+                                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                                  )}
+                                </button>
+                              );
+                            })
+                          )}
+
+                          {areaSearchQuery.trim() && !exactAreaMatch && (
+                            <button
+                              type="button"
+                              onClick={() => handleSelectArea(areaSearchQuery.trim())}
+                              className="w-full px-2.5 py-2 rounded-lg text-xs font-semibold text-primary hover:bg-primary/10 flex items-center gap-1.5 transition-colors cursor-pointer border-t border-slate-100 mt-1"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span className="truncate">
+                                Create &quot;{areaSearchQuery.trim()}&quot;
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   )}
                 </div>
               </div>
@@ -1354,22 +1339,19 @@ export default function PortfolioFormModal({
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-semibold text-slate-600 uppercase">
-                    COORDINATES (LAT, LNG)
+                    COORDINATES (LAT, LNG) (OPTIONAL)
                   </label>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <Input
-                      value={latitude}
-                      onChange={(e) => setLatitude(e.target.value)}
-                      placeholder="Latitude"
-                      className="h-9 text-xs"
-                    />
-                    <Input
-                      value={longitude}
-                      onChange={(e) => setLongitude(e.target.value)}
-                      placeholder="Longitude"
-                      className="h-9 text-xs"
-                    />
-                  </div>
+                  <Input
+                    value={coordinatesInput}
+                    onChange={(e) => handleCoordinatesChange(e.target.value)}
+                    placeholder="e.g. 23.8103, 90.4125"
+                    className="h-9 text-xs font-mono"
+                  />
+                  {(fieldErrors.latitude || fieldErrors.longitude) && (
+                    <span className="text-[10px] text-red-500 font-bold uppercase mt-1 block">
+                      {fieldErrors.latitude || fieldErrors.longitude}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1377,264 +1359,29 @@ export default function PortfolioFormModal({
             {/* Section: Rich Project Description */}
             <div className="space-y-1.5 pt-2">
               <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-                RICH PROJECT DESCRIPTION / OVERVIEW
+                Project Description (Rich Text)
               </label>
-              <Textarea
-                rows={4}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Detailed project summary, technical scope, reticulation network layout, pipeline specifications, safety certifications..."
-                className="text-sm font-medium leading-relaxed resize-y"
-              />
-            </div>
-
-            {/* Section 2: Primary Challenge & Solution */}
-            <div className="space-y-4 pt-4 border-t border-slate-100">
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-800 uppercase">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                  <span>
-                    PRIMARY CHALLENGE / OVERVIEW <span className="text-red-500">*</span>
-                  </span>
-                </label>
-                <Textarea
-                  rows={3}
-                  value={primaryChallenge}
-                  onChange={(e) => {
-                    setPrimaryChallenge(e.target.value);
-                    clearError("primary_challenge");
+              <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs [&_.ql-editor]:min-h-[180px]">
+                <RichTextEditor
+                  value={description}
+                  onChange={(val) => {
+                    setDescription(val);
+                    clearError("description");
                   }}
-                  placeholder="Describe the client's critical technical or operational bottleneck..."
-                  className={cn(
-                    "text-sm font-medium leading-relaxed resize-y",
-                    fieldErrors.primary_challenge && "border-red-500 focus-visible:ring-red-500/20"
-                  )}
+                  placeholder="Detailed project summary, technical scope, reticulation network layout, pipeline specifications, safety certifications..."
                 />
-                {fieldErrors.primary_challenge && (
-                  <p className="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>{fieldErrors.primary_challenge}</span>
-                  </p>
-                )}
               </div>
-
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-800 uppercase">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                  <span>
-                    PRIMARY SOLUTION PROVIDED <span className="text-red-500">*</span>
-                  </span>
-                </label>
-                <Textarea
-                  rows={3}
-                  value={primarySolution}
-                  onChange={(e) => {
-                    setPrimarySolution(e.target.value);
-                    clearError("primary_solution");
-                  }}
-                  placeholder="Describe the architecture, deliverables, and engineering solutions delivered..."
-                  className={cn(
-                    "text-sm font-medium leading-relaxed resize-y",
-                    fieldErrors.primary_solution && "border-red-500 focus-visible:ring-red-500/20"
-                  )}
-                />
-                {fieldErrors.primary_solution && (
-                  <p className="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>{fieldErrors.primary_solution}</span>
-                  </p>
-                )}
-              </div>
+              {fieldErrors.description && (
+                <p className="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{fieldErrors.description}</span>
+                </p>
+              )}
             </div>
 
-            {/* Section 3: Secondary Challenges Repeater */}
-            <div className="space-y-4 pt-4 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-                  SECONDARY CHALLENGES & SOLUTIONS (DETAILS PAGE REPEATER)
-                </h4>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddChallenge}
-                  className="h-8 gap-1.5 text-xs font-semibold border-primary text-primary hover:bg-sky-mist"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Another Challenge</span>
-                </Button>
-              </div>
 
-              <div className="space-y-3">
-                {challenges.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-primary tracking-wide">
-                        Challenge #{idx + 1}
-                      </span>
-                      {challenges.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveChallenge(idx)}
-                          className="h-6 w-6 text-slate-400 hover:text-red-500 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      )}
-                    </div>
 
-                    <div>
-                      <Input
-                        value={item.title}
-                        onChange={(e) => {
-                          handleChallengeChange(idx, "title", e.target.value);
-                          clearError(`challenges.${idx}.title`);
-                        }}
-                        placeholder="Challenge Title (e.g. Multi-Currency Settlement) *"
-                        className={cn(
-                          "h-9 text-sm font-medium bg-white",
-                          fieldErrors[`challenges.${idx}.title`] &&
-                            "border-red-500 focus-visible:ring-red-500/20"
-                        )}
-                      />
-                      {fieldErrors[`challenges.${idx}.title`] && (
-                        <p className="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          <span>{fieldErrors[`challenges.${idx}.title`]}</span>
-                        </p>
-                      )}
-                    </div>
 
-                    <div>
-                      <Textarea
-                        rows={2}
-                        value={item.challenge_description}
-                        onChange={(e) => {
-                          handleChallengeChange(idx, "challenge_description", e.target.value);
-                          clearError(`challenges.${idx}.challenge_description`);
-                        }}
-                        placeholder="Specific bottleneck description... *"
-                        className={cn(
-                          "text-xs font-medium bg-white resize-y",
-                          fieldErrors[`challenges.${idx}.challenge_description`] &&
-                            "border-red-500 focus-visible:ring-red-500/20"
-                        )}
-                      />
-                      {fieldErrors[`challenges.${idx}.challenge_description`] && (
-                        <p className="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          <span>{fieldErrors[`challenges.${idx}.challenge_description`]}</span>
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Textarea
-                        rows={2}
-                        value={item.solution_provided}
-                        onChange={(e) => {
-                          handleChallengeChange(idx, "solution_provided", e.target.value);
-                          clearError(`challenges.${idx}.solution_provided`);
-                        }}
-                        placeholder="Engineered solution architecture... *"
-                        className={cn(
-                          "text-xs font-medium bg-white resize-y",
-                          fieldErrors[`challenges.${idx}.solution_provided`] &&
-                            "border-red-500 focus-visible:ring-red-500/20"
-                        )}
-                      />
-                      {fieldErrors[`challenges.${idx}.solution_provided`] && (
-                        <p className="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          <span>{fieldErrors[`challenges.${idx}.solution_provided`]}</span>
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Individual Challenge Image Upload Box */}
-                    <div className="space-y-1">
-                      <div
-                        className={cn(
-                          "rounded-lg border p-2.5 flex items-center justify-between gap-3 transition-colors",
-                          fieldErrors[`challenges.${idx}.supporting_image`]
-                            ? "border-red-500 bg-red-50/20"
-                            : "bg-white border-slate-200/80"
-                        )}
-                      >
-                        {item.imagePreview || item.supporting_image ? (
-                          <div className="flex items-center gap-3 min-w-0">
-                            <img
-                              src={item.imagePreview || item.supporting_image}
-                              alt="Challenge visual"
-                              className="w-12 h-12 object-cover rounded-md border border-slate-200 shrink-0"
-                            />
-                            <div className="min-w-0">
-                              <span className="text-xs font-bold text-slate-800 block truncate">
-                                {item.imageFile ? "Diagram Selected" : "Visual / Diagram Attached"}
-                              </span>
-                              <span className="text-[10px] text-emerald-600 font-medium">
-                                {item.imageFile
-                                  ? "Staged (Uploads when saved)"
-                                  : "Ready for case study details view"}
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <ImageIcon className="w-4 h-4 text-slate-400" />
-                            <span className="text-xs font-medium text-slate-600">
-                              No diagram attached yet <span className="text-red-500">*</span>
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
-                            <UploadCloud className="w-3.5 h-3.5 text-primary" />
-                            <span>
-                              {item.imagePreview || item.supporting_image
-                                ? "Change Diagram"
-                                : "Upload Diagram *"}
-                            </span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              disabled={saving}
-                              onChange={(e) => handleChallengeImageChange(idx, e)}
-                              className="hidden"
-                            />
-                          </label>
-
-                          {(item.imagePreview || item.supporting_image) && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveChallengeImage(idx)}
-                              className="h-7 w-7 p-0 text-slate-400 hover:text-red-500 hover:bg-red-50"
-                              title="Remove diagram"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      {fieldErrors[`challenges.${idx}.supporting_image`] && (
-                        <p className="text-xs font-semibold text-red-500 mt-1 flex items-center gap-1">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          <span>{fieldErrors[`challenges.${idx}.supporting_image`]}</span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Modal Footer */}
@@ -1697,12 +1444,47 @@ export default function PortfolioFormModal({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Nested Category Management Modal */}
-      <PortfolioCategoryModal
-        open={isCategoryModalOpen}
-        onOpenChange={setIsCategoryModalOpen}
-        categories={categories}
-        onCategoriesChange={(updated: any) => onCategoriesChange?.(updated)}
+
+
+      {/* Nested Area Management Modal */}
+      <PortfolioAreaModal
+        open={isAreaModalOpen}
+        onOpenChange={setIsAreaModalOpen}
+        areas={areaObjects}
+        onAreasChange={setAreaObjects}
+        onSelectArea={(a) => setArea(a)}
+      />
+
+      {/* Create Service Modal (Adds service and automatically selects it) */}
+      <CreateServiceModal
+        open={isCreateServiceOpen}
+        onOpenChange={setIsCreateServiceOpen}
+        onSuccess={(createdService) => {
+          if (createdService?.name) {
+            const newCat: PortfolioCategory = {
+              id: createdService.id || Date.now(),
+              name: createdService.name,
+              slug: createdService.slug,
+            };
+            setServicesAsCategories((prev) => [
+              newCat,
+              ...prev.filter(
+                (c) => c.name.toLowerCase() !== newCat.name.toLowerCase()
+              ),
+            ]);
+            setCategory(createdService.name);
+            clearError("category");
+            if (onCategoriesChange) {
+              onCategoriesChange([
+                newCat,
+                ...servicesAsCategories.filter(
+                  (c) => c.name.toLowerCase() !== newCat.name.toLowerCase()
+                ),
+              ]);
+            }
+            fetchServices();
+          }
+        }}
       />
     </>
   );

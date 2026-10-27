@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
-import {
-  Hanken_Grotesk,
-  Geist_Mono,
-  Space_Grotesk,
-  Plus_Jakarta_Sans,
-  Inter,
-  JetBrains_Mono,
-} from "next/font/google";
+import { Hanken_Grotesk, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
+import { LOCALE_COOKIE, resolveLocale } from "@/lib/locale";
 import "./globals.css";
 import SplashScreen from "@/components/shared/SplashScreen";
 import AutoTranslate from "@/components/shared/AutoTranslate";
 import { SiteConfigProvider } from "@/context/SiteConfigContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { getSiteConfig } from "@/services/site-config/site-config.service";
+import { BRAND } from "@/lib/brand";
 import FloatingWhatsApp from "@/components/shared/FloatingWhatsApp";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
@@ -32,49 +28,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Second brand face. Engineering Services (Figma 8:142) sets every micro-label
-// — badges, spec codes, CTAs, tags — in Space Grotesk while headings/body stay
-// Hanken Grotesk. Static (not variable) so the 500/600/700 cuts match Figma.
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
-
-// Figma 8:400 (Why Choose Digital Gas Service) sets headings/metrics in
-// Plus Jakarta Sans, body copy in Inter and the eyebrow label in JetBrains
-// Mono. Static cuts so 600/700/800 match the design exactly.
-const plusJakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta",
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-});
-
-const inter = Inter({
-  variable: "--font-inter-body",
-  subsets: ["latin"],
-  weight: ["400"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  weight: ["500"],
-});
-
 export async function generateMetadata(): Promise<Metadata> {
   const siteConfig = await getSiteConfig();
-  const companyName = siteConfig.company_name || "MilanoVA Technologies";
+  const companyName = siteConfig.company_name || BRAND.name;
   const title = {
-    default: siteConfig.site_meta_title || `${companyName} | Enterprise Tech & IT Solutions`,
+    default: siteConfig.site_meta_title || `${companyName} | ${BRAND.defaultTitleSuffix}`,
     template: `${companyName} | %s`
   };
   const description = siteConfig.site_meta_description || (siteConfig.company_short_description
     ? siteConfig.company_short_description
-    : "MilanoVA Technologies — Premier enterprise software, cloud infrastructure, AI solutions & IT consulting.");
+    : BRAND.description);
   const logo = siteConfig.company_logo || "/favicon.ico";
+  const favicon = siteConfig.site_favicon || siteConfig.company_logo || "/favicon.ico";
   const ogImage = siteConfig.site_og_image || siteConfig.company_logo || "/images/og-image.webp";
-  const keywordsString = siteConfig.site_meta_keywords || "enterprise software, cloud computing, AI solutions, IT consulting, full-stack engineering, MilanoVA";
+  const keywordsString = siteConfig.site_meta_keywords || BRAND.keywords;
   const keywords = keywordsString.split(",").map((k: string) => k.trim());
 
   return {
@@ -102,9 +69,9 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     authors: [{ name: companyName }],
     icons: {
-      icon: logo,
-      shortcut: logo,
-      apple: logo,
+      icon: favicon,
+      shortcut: favicon,
+      apple: favicon,
     },
   };
 }
@@ -114,15 +81,27 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const siteConfig = await getSiteConfig();
+  const [siteConfig, cookieStore] = await Promise.all([
+    getSiteConfig(),
+    cookies(),
+  ]);
+  const initialLocale = resolveLocale(cookieStore.get(LOCALE_COOKIE)?.value);
+  const activeFavicon = siteConfig.site_favicon || siteConfig.company_logo || "/favicon.ico";
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={initialLocale} suppressHydrationWarning>
       <head>
         <meta
           name="google-site-verification"
           content="t8Oyf20bPl5W-UsQvEsrEaxwM66bah4PHMnx8YyoYPM"
         />
+        {activeFavicon && (
+          <>
+            <link rel="icon" href={activeFavicon} />
+            <link rel="shortcut icon" href={activeFavicon} />
+            <link rel="apple-touch-icon" href={activeFavicon} />
+          </>
+        )}
         {/* Preconnect so the hero YouTube background starts playing ASAP. */}
         <link rel="preconnect" href="https://www.youtube.com" />
         <link rel="preconnect" href="https://www.youtube-nocookie.com" />
@@ -130,20 +109,13 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://www.youtube.com" />
         <link rel="dns-prefetch" href="https://www.youtube-nocookie.com" />
       </head>
-      {/* font-sans is required, not decorative: `@theme inline` inlines
-          --font-sans instead of emitting it, so Tailwind's preflight
-          `var(--default-font-family)` resolves to nothing and the whole site
-          silently fell back to the system UI stack. */}
-      <body
-        className={`${hankenGrotesk.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${plusJakartaSans.variable} ${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
-        suppressHydrationWarning
-      >
+      <body className={`${hankenGrotesk.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
         <SiteConfigProvider config={siteConfig}>
-          <LanguageProvider>
+          <LanguageProvider initialLocale={initialLocale}>
             <AutoTranslate />
             <SplashScreen />
             <Navbar />
-            <main className="min-h-screen">{children}</main>
+            <main className="min-h-screen" suppressHydrationWarning>{children}</main>
             <Footer />
             <FloatingWhatsApp />
           </LanguageProvider>

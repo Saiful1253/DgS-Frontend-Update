@@ -29,6 +29,11 @@ const nextConfig = {
         hostname: "img.youtube.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
     ],
   },
   // reactCompiler: true, // disabled: causes high CPU/RAM runaway on dev compile

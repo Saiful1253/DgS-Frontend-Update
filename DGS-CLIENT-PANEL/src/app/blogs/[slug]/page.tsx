@@ -11,6 +11,7 @@ import dayjs from "dayjs";
 import type { Metadata } from "next";
 import { getSiteConfig } from "@/services/site-config/site-config.service";
 import { normalizeBlogEmbedUrls } from "@/lib/blog-content";
+import { BRAND } from "@/lib/brand";
 import ArticleToc from "@/components/blog/ArticleToc";
 import BlogCard from "@/components/sections/blogs/BlogCard";
 
@@ -61,7 +62,7 @@ export async function generateMetadata({ params }: BlogDetailsPageProps): Promis
     console.error("SEO Metadata: Failed to fetch blog post:", error);
   }
 
-  let brand = "Milanova Technologies";
+  let brand: string = BRAND.name;
   try {
     const siteConfig = await getSiteConfig();
     if (siteConfig.company_name) brand = siteConfig.company_name;
@@ -155,7 +156,7 @@ export default async function BlogDetailsPage({ params }: BlogDetailsPageProps) 
 
   const { html: contentHtml, headings } = addHeadingIds(blog.content || "");
 
-  let brand = "Milanova Technologies";
+  let brand: string = BRAND.name;
   try {
     const siteConfig = await getSiteConfig();
     if (siteConfig.company_name) brand = siteConfig.company_name;
@@ -167,8 +168,8 @@ export default async function BlogDetailsPage({ params }: BlogDetailsPageProps) 
   const primaryAuthorDesignation =
     blog.primary_author?.designation ||
     (blog.primary_author_name || blog.primary_author
-      ? "Author · Milanova Technologies"
-      : "Milanova Technologies Team");
+      ? `Author · ${brand}`
+      : `${brand} Team`);
 
   return (
     <>

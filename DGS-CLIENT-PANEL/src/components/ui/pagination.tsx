@@ -8,6 +8,7 @@ interface PaginationProps {
   totalPages: number;
   onPageChange?: (page: number) => void;
   buildPageUrl?: (page: number) => string;
+  alwaysVisible?: boolean;
 }
 
 export function Pagination({
@@ -15,8 +16,9 @@ export function Pagination({
   totalPages,
   onPageChange,
   buildPageUrl,
+  alwaysVisible = false,
 }: PaginationProps) {
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1 && !alwaysVisible) return null;
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -111,29 +113,38 @@ export function Pagination({
   };
 
   return (
-    <div className="flex items-center justify-center gap-6 pt-8 border-t border-zinc-100">
-      {currentPage > 1 &&
-        renderButton(
-          currentPage - 1,
-          <>
-            <ChevronLeft className="w-4 h-4 mr-1.5" /> Previous
-          </>,
-          "outline"
-        )}
+    <div className="flex items-center justify-center gap-2 sm:gap-4 pt-6 border-t border-slate-100">
+      {(currentPage > 1 || alwaysVisible) && (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentPage <= 1}
+          className={`h-9 px-3 text-xs font-semibold ${currentPage <= 1 ? "opacity-40 cursor-not-allowed" : "text-slate-700 hover:text-slate-900"}`}
+          onClick={() => currentPage > 1 && onPageChange?.(currentPage - 1)}
+        >
+          <ChevronLeft className="w-4 h-4 mr-1" />
+          Previous
+        </Button>
+      )}
+
       <div className="flex items-center gap-1.5">
         {getPageNumbers().map((page) =>
           renderButton(page, page, "outline")
         )}
       </div>
 
-      {currentPage < totalPages &&
-        renderButton(
-          currentPage + 1,
-          <>
-            Next <ChevronRight className="w-4 h-4 ml-1.5" />
-          </>,
-          "outline"
-        )}
+      {(currentPage < totalPages || alwaysVisible) && (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentPage >= totalPages}
+          className={`h-9 px-3 text-xs font-semibold ${currentPage >= totalPages ? "opacity-40 cursor-not-allowed" : "text-slate-700 hover:text-slate-900"}`}
+          onClick={() => currentPage < totalPages && onPageChange?.(currentPage + 1)}
+        >
+          Next
+          <ChevronRight className="w-4 h-4 ml-1" />
+        </Button>
+      )}
     </div>
   );
 }

@@ -12,9 +12,9 @@ import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 // English-only source strings. Bangla is produced at runtime by <AutoTranslate>.
 const navLinks: { label: string; href: string }[] = [
   { label: "Home", href: "/" },
-  { label: "Tech Stack", href: "/products" },
   { label: "Services", href: "/services" },
   { label: "Portfolio", href: "/portfolio" },
+  { label: "Certifications", href: "/certificates" },
   { label: "Blogs", href: "/blogs" },
   { label: "Careers", href: "/careers" },
   { label: "Contact", href: "/contact" },

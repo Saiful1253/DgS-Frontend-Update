@@ -9,17 +9,14 @@ import {
   Trash2,
   Edit,
   Search,
-  Globe,
   Layers,
   Filter,
   AlertTriangle,
-  FolderKanban,
   Loader2,
   ChevronDown,
   Star,
-  Video,
   MapPin,
-  Youtube,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -41,29 +38,20 @@ import {
   deletePortfolio,
   togglePortfolioFeatured,
 } from "@/services/portfolio/portfolio.service";
-import PortfolioCategoryModal from "./modals/category/portfolio-category-modal";
 import PortfolioDetailModal from "./modals/item/portfolio-detail-modal";
 import PortfolioFormModal from "./modals/item/portfolio-form-modal";
 import {
-  PROJECT_TYPES,
   PROJECT_STATUSES,
 } from "@/lib/bangladesh-locations";
+
+const stripHtml = (html?: string) =>
+  html ? html.replace(/<[^>]*>?/gm, " ").replace(/\s+/g, " ").trim() : "";
 
 interface PortfolioManagerProps {
   initialPortfolios: PortfolioItem[];
   initialCategories?: PortfolioCategory[];
   autoOpenCreate?: boolean;
 }
-
-const DEFAULT_CATEGORIES: PortfolioCategory[] = [
-  { id: 1, name: "Software & Cloud" },
-  { id: 2, name: "Software Engineering" },
-  { id: 3, name: "Creative & Post-Production" },
-  { id: 4, name: "Marketing & Growth" },
-  { id: 5, name: "Mobile Apps & Platforms" },
-  { id: 6, name: "AI & Automation" },
-  { id: 7, name: "FinTech & Web3" },
-];
 
 export default function PortfolioManager({
   initialPortfolios,
@@ -79,11 +67,10 @@ export default function PortfolioManager({
     }
   }, [initialPortfolios]);
 
-  // Dynamic Categories State
+  // Dynamic Services State (sourced from /services)
   const [categories, setCategories] = useState<PortfolioCategory[]>(
-    initialCategories && initialCategories.length > 0 ? initialCategories : DEFAULT_CATEGORIES
+    initialCategories || []
   );
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
   // Detail Modal State (Clicking Card Opens Case Study Details)
   const [viewingDetailItem, setViewingDetailItem] = useState<PortfolioItem | null>(null);
@@ -105,14 +92,12 @@ export default function PortfolioManager({
   const [categoryDraft, setCategoryDraft] = useState("All");
   const [featuredDraft, setFeaturedDraft] = useState("all");
   const [statusDraft, setStatusDraft] = useState("all");
-  const [projectTypeDraft, setProjectTypeDraft] = useState("all");
 
   const [appliedFilters, setAppliedFilters] = useState({
     search: "",
     category: "All",
     featured: "all",
     status: "all",
-    projectType: "all",
   });
 
   const handleApplyFilters = () => {
@@ -121,7 +106,6 @@ export default function PortfolioManager({
       category: categoryDraft,
       featured: featuredDraft,
       status: statusDraft,
-      projectType: projectTypeDraft,
     });
     setCurrentPage(1);
   };
@@ -131,13 +115,11 @@ export default function PortfolioManager({
     setCategoryDraft("All");
     setFeaturedDraft("all");
     setStatusDraft("all");
-    setProjectTypeDraft("all");
     setAppliedFilters({
       search: "",
       category: "All",
       featured: "all",
       status: "all",
-      projectType: "all",
     });
     setCurrentPage(1);
   };
@@ -147,20 +129,17 @@ export default function PortfolioManager({
       appliedFilters.category !== "All" ||
       appliedFilters.featured !== "all" ||
       appliedFilters.status !== "all" ||
-      appliedFilters.projectType !== "all" ||
       searchDraft.trim() ||
       categoryDraft !== "All" ||
       featuredDraft !== "all" ||
-      statusDraft !== "all" ||
-      projectTypeDraft !== "all"
+      statusDraft !== "all"
   );
 
   const isFilterPending =
     searchDraft.trim() !== appliedFilters.search ||
     categoryDraft !== appliedFilters.category ||
     featuredDraft !== appliedFilters.featured ||
-    statusDraft !== appliedFilters.status ||
-    projectTypeDraft !== appliedFilters.projectType;
+    statusDraft !== appliedFilters.status;
 
   // Pagination Scope State
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -172,15 +151,13 @@ export default function PortfolioManager({
     const targetCat = appliedFilters.category;
     const reqFeatured = appliedFilters.featured;
     const reqStatus = appliedFilters.status;
-    const reqType = appliedFilters.projectType;
 
     // Fast-path: return original array when no filters active
     if (
       !rawSearch &&
       targetCat === "All" &&
       reqFeatured === "all" &&
-      reqStatus === "all" &&
-      reqType === "all"
+      reqStatus === "all"
     ) {
       return portfolios;
     }
@@ -210,16 +187,9 @@ export default function PortfolioManager({
         }
       }
 
-      // 4. Project Type Filter
-      if (reqType !== "all") {
-        if ((item.project_type || "residential") !== reqType) {
-          return false;
-        }
-      }
-
       // 5. Fast multi-field token match
       if (searchTokens.length > 0) {
-        const searchableBlob = `${item.project_name} ${item.client_name || ""} ${item.category || ""} ${(item.tags || []).join(" ")} ${item.district || ""} ${item.area || ""} ${item.address || ""} ${item.description || ""} ${item.primary_challenge || ""} ${item.primary_solution || ""}`.toLowerCase();
+        const searchableBlob = `${item.project_name} ${item.client_name || ""} ${item.category || ""} ${(item.tags || []).join(" ")} ${item.district || ""} ${item.area || ""} ${item.address || ""} ${item.description || ""}`.toLowerCase();
 
         for (let i = 0; i < searchTokens.length; i++) {
           if (!searchableBlob.includes(searchTokens[i])) {
@@ -253,7 +223,7 @@ export default function PortfolioManager({
   const totalProjects = portfolios.length;
   const featuredCount = portfolios.filter((p) => p.is_featured).length;
   const uniqueCategories = new Set(portfolios.map((p) => p.category).filter(Boolean)).size;
-  const totalChallenges = portfolios.reduce((acc, p) => acc + (p.challenges?.length || 0), 0);
+  const completedCount = portfolios.filter((p) => p.project_status === "completed").length;
 
   const openCreateModal = () => {
     setEditingProject(null);
@@ -351,7 +321,7 @@ export default function PortfolioManager({
         </h2>
         <p className="text-sm text-slate-600 leading-relaxed max-w-5xl">
           Manages showcased client projects, media showcase (Images & YouTube Video), location coverage,
-          project categories & types, status tracking, and challenge vs. solution repeater blocks.
+          project categories & types, status tracking, and rich text project descriptions.
         </p>
       </div>
 
@@ -383,21 +353,21 @@ export default function PortfolioManager({
 
         <div className="p-5 bg-white rounded-xl border border-slate-200 shadow-xs space-y-1">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-            Documented Challenges
+            Completed Projects
           </span>
-          <div className="text-3xl font-extrabold text-slate-900 tracking-tight">{totalChallenges}</div>
-          <p className="text-xs text-slate-500 font-medium">Detailed solutions delivered</p>
+          <div className="text-3xl font-extrabold text-slate-900 tracking-tight">{completedCount}</div>
+          <p className="text-xs text-slate-500 font-medium">Finished installations</p>
         </div>
       </div>
 
       {/* 4. Filter & Search Controls */}
       <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {/* Category Dropdown (Dynamic) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Category / Service Dropdown (Dynamic from /services) */}
           <div className="space-y-1">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
               <Filter className="w-3.5 h-3.5 text-primary" />
-              <span>Category:</span>
+              <span>Service:</span>
             </label>
             <div className="relative">
               <select
@@ -411,40 +381,10 @@ export default function PortfolioManager({
                 }}
                 className="w-full h-10 pl-3 pr-8 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs appearance-none focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer truncate"
               >
-                <option value="All">All Categories</option>
+                <option value="All">All Services</option>
                 {categories.map((cat) => (
                   <option key={cat.id || cat.name} value={cat.name}>
                     {cat.name}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                <ChevronDown className="w-4 h-4" />
-              </div>
-            </div>
-          </div>
-
-          {/* Project Type Filter */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-              Project Type:
-            </label>
-            <div className="relative">
-              <select
-                value={projectTypeDraft}
-                onChange={(e) => setProjectTypeDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleApplyFilters();
-                  }
-                }}
-                className="w-full h-10 pl-3 pr-8 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs appearance-none focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer truncate"
-              >
-                <option value="all">All Types</option>
-                {PROJECT_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
                   </option>
                 ))}
               </select>
@@ -509,21 +449,6 @@ export default function PortfolioManager({
                 <ChevronDown className="w-4 h-4" />
               </div>
             </div>
-          </div>
-
-          {/* Manage Categories Action */}
-          <div className="flex items-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsCategoryModalOpen(true)}
-              className="w-full h-10 px-3.5 rounded-lg text-xs font-semibold text-slate-700 border-slate-200 hover:border-primary/40 hover:text-primary gap-1.5 shadow-2xs shrink-0 whitespace-nowrap"
-              title="Manage dynamic portfolio categories"
-            >
-              <FolderKanban className="w-3.5 h-3.5 text-primary" />
-              <span>Manage Categories</span>
-            </Button>
           </div>
         </div>
 
@@ -618,11 +543,7 @@ export default function PortfolioManager({
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginatedPortfolios.map((item) => {
-              const isVideo = item.media_type === "youtube";
               const isCompleted = (item.project_status || "completed") === "completed";
-              const typeLabel =
-                PROJECT_TYPES.find((t) => t.value === item.project_type)?.label ||
-                (item.project_type ? item.project_type.replace(/_/g, " ") : "Residential");
 
               return (
                 <div
@@ -658,12 +579,6 @@ export default function PortfolioManager({
                           <span className="px-2.5 py-0.5 rounded-full bg-white/95 backdrop-blur-xs text-primary text-[10px] font-bold shadow-xs border border-primary/20">
                             {item.category || "Case Study"}
                           </span>
-                          {isVideo && (
-                            <span className="px-2 py-0.5 rounded-full bg-red-600/95 text-white text-[10px] font-bold shadow-xs flex items-center gap-1">
-                              <Youtube className="w-3 h-3" />
-                              <span>Video</span>
-                            </span>
-                          )}
                         </div>
 
                         <div className="flex items-center gap-1.5">
@@ -686,20 +601,17 @@ export default function PortfolioManager({
                         </div>
                       </div>
 
-                      {/* Bottom Banner Info: Type & Location */}
-                      <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between pointer-events-none text-[10px] font-semibold text-white">
-                        <span className="px-2 py-0.5 rounded-md bg-slate-900/80 backdrop-blur-xs">
-                          {typeLabel}
-                        </span>
-                        {(item.district || item.area) && (
-                          <span className="px-2 py-0.5 rounded-md bg-slate-900/80 backdrop-blur-xs flex items-center gap-1 truncate max-w-[150px]">
+                      {/* Bottom Banner Info: Location */}
+                      {(item.district || item.area) && (
+                        <div className="absolute bottom-2 right-2.5 flex items-center justify-end pointer-events-none text-[10px] font-semibold text-white">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-900/80 backdrop-blur-xs flex items-center gap-1 truncate max-w-[180px]">
                             <MapPin className="w-2.5 h-2.5 text-primary shrink-0" />
                             <span className="truncate">
                               {[item.area, item.district].filter(Boolean).join(", ")}
                             </span>
                           </span>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Title & Client */}
@@ -734,12 +646,7 @@ export default function PortfolioManager({
                     {/* Description or Challenge snippet */}
                     <div className="pt-1 text-xs leading-relaxed border-t border-slate-100">
                       {item.description ? (
-                        <p className="text-slate-600 line-clamp-2">{item.description}</p>
-                      ) : item.primary_challenge ? (
-                        <p className="text-slate-600 line-clamp-2">
-                          <span className="font-bold text-red-500">Challenge: </span>
-                          {item.primary_challenge}
-                        </p>
+                        <p className="text-slate-600 line-clamp-2">{stripHtml(item.description)}</p>
                       ) : (
                         <p className="text-slate-400 italic text-[11px]">No description provided.</p>
                       )}
@@ -749,19 +656,7 @@ export default function PortfolioManager({
                   {/* Bottom Action Footer */}
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                      <span>{item.challenges?.length || 0} Challenges</span>
-                      {item.live_url && (
-                        <a
-                          href={item.live_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="hover:text-primary transition-colors ml-1"
-                          title="Open live website"
-                        >
-                          <Globe className="w-3.5 h-3.5" />
-                        </a>
-                      )}
+                      <span className="capitalize">{item.project_status || "completed"}</span>
                     </div>
 
                     <div className="flex items-center gap-1.5">
@@ -894,15 +789,7 @@ export default function PortfolioManager({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 8. Miniature Portfolio Categories Modal */}
-      <PortfolioCategoryModal
-        open={isCategoryModalOpen}
-        onOpenChange={setIsCategoryModalOpen}
-        categories={categories}
-        onCategoriesChange={(updatedCategories) => {
-          setCategories(updatedCategories);
-        }}
-      />
+
 
       {/* 9. Case Study Detailed View Modal */}
       <PortfolioDetailModal

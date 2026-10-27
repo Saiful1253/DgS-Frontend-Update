@@ -8,6 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import BlogCard from "./BlogCard";
 import BlogsSkeleton from "@/components/skeletons/BlogsSkeleton";
 import { getBlogs } from "@/services/blog/blog.service";
+import { BRAND } from "@/lib/brand";
 import type { Blog } from "@/types/cms/blog";
 
 interface BlogsListingProps {
@@ -104,7 +105,7 @@ export default function BlogsListing({
         <div className="container mx-auto px-6 py-16 md:py-24">
           <div className="max-w-4xl space-y-4">
             <span className="inline-flex items-center rounded-full bg-white/10 border border-white/20 text-white text-[11px] font-bold uppercase tracking-widest px-3 py-1">
-              Milanova Technologies Blog
+              {BRAND.name} Blog
             </span>
             <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tight leading-tight">
               Engineering Insights

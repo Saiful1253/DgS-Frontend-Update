@@ -39,8 +39,24 @@ export const getPublicPortfolioResult = cache(async (params: {
   category?: string;
   search?: string;
   featured?: boolean;
+  page?: number;
+  limit?: number;
+  status?: string;
+  projectType?: string;
+  district?: string;
+  area?: string;
 } = {}): Promise<ReadResult<PublicPortfolioList>> => {
-  const res = await getPublicPortfolioAction(params.category, params.search, params.featured);
+  const res = await getPublicPortfolioAction(
+    params.category,
+    params.search,
+    params.featured,
+    params.page,
+    params.limit,
+    params.status,
+    params.projectType,
+    params.district,
+    params.area,
+  );
   if (!res.success) return { ok: false, message: res.message || "Failed to load portfolio" };
   return { ok: true, data: (res.data ?? EMPTY_LIST) as PublicPortfolioList };
 });
@@ -73,12 +89,22 @@ export const getPublicPortfolioCategoriesResult = cache(
  * reports the failure in its result; the page renders what it can.
  */
 export const getPublicPortfolio = cache(
-  async (params: { category?: string; search?: string; featured?: boolean } = {}): Promise<
-    PublicPortfolioList
-  > => {
+  async (
+    params: {
+      category?: string;
+      search?: string;
+      featured?: boolean;
+      page?: number;
+      limit?: number;
+      status?: string;
+      projectType?: string;
+      district?: string;
+      area?: string;
+    } = {},
+  ): Promise<PublicPortfolioList> => {
     const result = await getPublicPortfolioResult(params);
     return result.ok ? result.data : EMPTY_LIST;
-  }
+  },
 );
 
 /** Single case study for `/portfolio/[slug]`; `null` renders the not-found state. */
@@ -99,8 +125,25 @@ export const getPublicPortfolioCategories = cache(async (): Promise<string[]> =>
 export const listPublicPortfolios = (
   category?: string,
   search?: string,
-  featured?: boolean
-): Promise<ActionResult> => getPublicPortfolioAction(category, search, featured);
+  featured?: boolean,
+  page?: number,
+  limit?: number,
+  status?: string,
+  projectType?: string,
+  district?: string,
+  area?: string,
+): Promise<ActionResult> =>
+  getPublicPortfolioAction(
+    category,
+    search,
+    featured,
+    page,
+    limit,
+    status,
+    projectType,
+    district,
+    area,
+  );
 
 export const listPublicPortfolioCategories = (): Promise<ActionResult> =>
   getPublicPortfolioCategoriesAction();

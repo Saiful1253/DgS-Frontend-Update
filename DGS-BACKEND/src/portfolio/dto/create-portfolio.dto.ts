@@ -13,7 +13,6 @@ import {
   ValidateNested,
 } from 'class-validator';
 import {
-  PortfolioChallengeDto,
   PortfolioPricingTierDto,
 } from './portfolio-challenge.dto';
 import { PortfolioMediaType, PortfolioProjectStatus, PortfolioProjectType } from '../entities/portfolio.entity';
@@ -73,9 +72,6 @@ export class CreatePortfolioDto {
   media_type?: PortfolioMediaType;
 
   @IsOptional()
-  @ValidateIf((o) => o.media_type === PortfolioMediaType.YOUTUBE)
-  @IsNotEmpty()
-  @IsUrl({}, { message: 'Please provide a valid YouTube URL' })
   @IsString()
   @MaxLength(500)
   media_url?: string;
@@ -112,14 +108,6 @@ export class CreatePortfolioDto {
   cover_image?: string;
 
   @IsOptional()
-  @IsString()
-  primary_challenge?: string;
-
-  @IsOptional()
-  @IsString()
-  primary_solution?: string;
-
-  @IsOptional()
   @IsBoolean()
   comparison_enabled?: boolean;
 
@@ -145,11 +133,6 @@ export class CreatePortfolioDto {
   @MaxLength(255)
   pricing_title?: string;
 
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => PortfolioChallengeDto)
-  challenges?: PortfolioChallengeDto[];
 
   @IsOptional()
   @IsArray()

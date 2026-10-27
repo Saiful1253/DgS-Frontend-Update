@@ -25,8 +25,4 @@ export type {
   ServicePillarEntity as PublicServicePillar,
 } from "@/types/service";
 
-export type { Technology, TechnologyCategoryItem } from "@/types/technology";
-
-export type { Technology as PublicTechnology } from "@/types/technology";
-
 export type { PublicServicesPayload } from "@/types/service";

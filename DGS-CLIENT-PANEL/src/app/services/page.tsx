@@ -1,28 +1,30 @@
 import React from "react";
 import { getPublicServices } from "@/services/service/service.service";
-import { getTechnologies } from "@/services/technology/technology.service";
-import ServicesClientView from "@/components/services/ServicesClientView";
-
-export const revalidate = 3600;
+import {
+  getPublicWhyChooseUs,
+  getPublicWhyChooseUsMetrics,
+} from "@/services/why-choose-us/why-choose-us.service";
+import ServicesSection from "@/components/sections/services/ServicesSection";
+import WhyChooseUsSection from "@/components/sections/services/WhyChooseUsSection";
+import { BRAND } from "@/lib/brand";
 
 export const metadata = {
-  title: "Services & Capabilities | MilanoVA Technologies",
+  title: `Services | ${BRAND.name}`,
   description:
-    "Explore MilanoVA's service pillars spanning software engineering, creative production, data, growth, and advisory services.",
+    "Centralised LPG reticulation, autogas plants, industrial utility pipelines and fire hydrant systems for residential, commercial and industrial projects.",
 };
 
 export default async function ServicesPage() {
-  const [{ services, pillars, groups }, technologies] = await Promise.all([
+  const [{ services }, whyChooseItems, whyChooseMetrics] = await Promise.all([
     getPublicServices(),
-    getTechnologies(),
+    getPublicWhyChooseUs(),
+    getPublicWhyChooseUsMetrics(),
   ]);
 
   return (
-    <ServicesClientView
-      initialServices={services}
-      pillars={pillars}
-      groups={groups}
-      technologies={technologies}
-    />
+    <div className="space-y-0">
+      <ServicesSection services={services} />
+      <WhyChooseUsSection items={whyChooseItems} metrics={whyChooseMetrics} />
+    </div>
   );
 }

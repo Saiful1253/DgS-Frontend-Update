@@ -5,15 +5,40 @@ import { Portfolio } from './entities/portfolio.entity';
 import { PortfolioChallenge } from './entities/portfolio-challenge.entity';
 import { PortfolioPricingTier } from './entities/portfolio-pricing-tier.entity';
 import { PortfolioCategory } from './entities/portfolio-category.entity';
+import { PortfolioArea } from './entities/portfolio-area.entity';
+
+
 
 const DEFAULT_CATEGORIES = [
-  'Software & Cloud',
-  'Software Engineering',
-  'Creative & Post-Production',
-  'Marketing & Growth',
-  'Mobile Apps & Platforms',
-  'AI & Automation',
-  'FinTech & Web3',
+  'Central LPG Reticulation',
+  'Industrial Heavy Piping',
+  'AutoGas Refueling Stations',
+  'Utility RMS & Compliance',
+  'Commercial & Residential Gas',
+  'Fire Protection & Hydrants',
+];
+
+const DEFAULT_AREAS = [
+  'Uttara',
+  'Gulshan',
+  'Banani',
+  'Mirpur',
+  'Dhanmondi',
+  'Bashundhara R/A',
+  'Motijheel',
+  'Mohakhali',
+  'Badda',
+  'Baridhara',
+  'Tejgaon',
+  'Mohammadpur',
+  'Khilgaon',
+  'Basabo',
+  'Old Dhaka',
+  'Savar',
+  'Ashulia',
+  'Gazipur Sadar',
+  'Tongi',
+  'Narayanganj Sadar',
 ];
 
 @Injectable()
@@ -27,6 +52,8 @@ export class PortfolioService {
     private tierRepo: Repository<PortfolioPricingTier>,
     @InjectRepository(PortfolioCategory)
     private categoryRepo: Repository<PortfolioCategory>,
+    @InjectRepository(PortfolioArea)
+    private areaRepo: Repository<PortfolioArea>,
   ) {}
 
   async findAll(
@@ -56,7 +83,10 @@ export class PortfolioService {
     }
 
     if (search) {
-      qb.andWhere('(p.project_name ILIKE :s OR p.primary_challenge ILIKE :s OR p.primary_solution ILIKE :s)', { s: `%${search}%` });
+      qb.andWhere(
+        '(p.project_name ILIKE :s OR p.description ILIKE :s OR p.primary_challenge ILIKE :s OR p.primary_solution ILIKE :s)',
+        { s: `%${search}%` },
+      );
     }
 
     if (status) {
@@ -358,7 +388,6 @@ export class PortfolioService {
     const safePage = Math.max(1, Math.floor(Number(page) || 1));
     const safeLimit = Math.min(Math.max(1, Math.floor(Number(limit) || 20)), 100);
 
-    // Auto-seed default categories if database table is empty
     const currentTotal = await this.categoryRepo.count();
     if (currentTotal === 0) {
       const toSeed = DEFAULT_CATEGORIES.map((name) =>
@@ -408,6 +437,64 @@ export class PortfolioService {
     const category = await this.categoryRepo.findOneBy({ id });
     if (!category) throw new NotFoundException('Category not found');
     await this.categoryRepo.remove(category);
+    return { success: true };
+  }
+
+  // --- Portfolio Area Management ---
+
+  async findAllAreas(page = 1, limit = 20) {
+    const safePage = Math.max(1, Math.floor(Number(page) || 1));
+    const safeLimit = Math.min(Math.max(1, Math.floor(Number(limit) || 20)), 100);
+
+    const currentTotal = await this.areaRepo.count();
+    if (currentTotal === 0) {
+      const toSeed = DEFAULT_AREAS.map((name) =>
+        this.areaRepo.create({
+          name,
+          slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+        }),
+      );
+      await this.areaRepo.save(toSeed);
+    }
+
+    const [data, total] = await this.areaRepo.findAndCount({
+      order: { created_at: 'DESC' },
+      skip: (safePage - 1) * safeLimit,
+      take: safeLimit,
+    });
+
+    return {
+      data,
+      meta: {
+        total,
+        page: safePage,
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
+      },
+    };
+  }
+
+  async createArea(name: string) {
+    const trimmed = name.trim();
+    const slug = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const area = this.areaRepo.create({ name: trimmed, slug });
+    return this.areaRepo.save(area);
+  }
+
+  async updateArea(id: number, name: string) {
+    const area = await this.areaRepo.findOneBy({ id });
+    if (!area) throw new NotFoundException('Area not found');
+
+    const trimmed = name.trim();
+    area.name = trimmed;
+    area.slug = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return this.areaRepo.save(area);
+  }
+
+  async deleteArea(id: number) {
+    const area = await this.areaRepo.findOneBy({ id });
+    if (!area) throw new NotFoundException('Area not found');
+    await this.areaRepo.remove(area);
     return { success: true };
   }
 }

@@ -1,88 +1,62 @@
 import type { CompanySettings, SiteConfig } from "@/types/settings";
 
 /**
- * Bridge from the backend `company_settings` row to the flat `SiteConfig` the UI
+ * Bridge from the backend company_settings row to the flat SiteConfig the UI
  * consumes.
- *
- * Why this exists: `/client/config` returns the `company_settings` row, but the
- * UI reads a flat legacy contract (`company_name`, `whatsapp_number`, ...).
- * Without the bridge every field resolved to `undefined`, so the site rendered
- * with empty brand/contact/footer data. Doing the mapping here keeps all ~16
- * consumer sites working without touching a single component.
  */
-
-const DGS_DEFAULT_ADDRESS = "House #73, Madhya Basabo, Sabujbagh, Dhaka-1214, Bangladesh";
-const DGS_DEFAULT_PHONE = "01778-277178";
-const DGS_DEFAULT_EMAIL = "digitalgasservice@gmail.com";
-const DGS_DEFAULT_WHATSAPP = "01778277178";
-const DGS_DEFAULT_LAT = "23.7383000";
-const DGS_DEFAULT_LNG = "90.4300000";
 
 function str(v: unknown): string | undefined {
   if (typeof v === "string" && v.trim() !== "") return v;
   return undefined;
 }
 
-function cleanAddress(v: unknown): string {
-  const s = str(v);
-  if (!s || s.toLowerCase().includes("milan") || s.toLowerCase().includes("montenapoleone")) {
-    return DGS_DEFAULT_ADDRESS;
-  }
-  return s;
-}
-
-function cleanPhone(v: unknown): string {
-  const s = str(v);
-  if (!s || s.startsWith("+39") || s.includes("1234 5678")) {
-    return DGS_DEFAULT_PHONE;
-  }
-  return s;
-}
-
-function cleanEmail(v: unknown): string {
-  const s = str(v);
-  if (!s || s.includes("milanovatech.com")) {
-    return DGS_DEFAULT_EMAIL;
-  }
-  return s;
-}
-
-function cleanWhatsApp(v: unknown): string {
-  const s = str(v);
-  if (!s || s.startsWith("+39") || s.includes("340 000")) {
-    return DGS_DEFAULT_WHATSAPP;
-  }
-  return s;
-}
-
-function coord(v: unknown, fallback: string): string {
-  if (v === null || v === undefined) return fallback;
-  const s = String(v).trim();
-  return s !== "" && !Number.isNaN(Number(s)) ? s : fallback;
-}
-
 export function normalizeSiteConfig(raw: CompanySettings | null | undefined): SiteConfig {
-  const emails = raw?.official_emails ?? {};
-  const phones = raw?.official_phones ?? {};
-  const social = raw?.social_links ?? {};
+  if (!raw) return {};
 
-  const brand = str(raw?.brand_name) || "Digital Gas Service";
+  const emails = (raw as any).official_emails ?? {};
+  const phones = (raw as any).official_phones ?? {};
+  const social = (raw as any).social_links ?? {};
+
+  const brand = str((raw as any).brand_name) ?? str((raw as any).legal_company_name);
+
+  const lat = str((raw as any).company_latitude) ?? str((raw as any).latitude);
+  const lng = str((raw as any).company_longitude) ?? str((raw as any).longitude);
+  let addr = str((raw as any).primary_headquarters_address) ?? str((raw as any).company_address);
+  if (lat && lng && addr && addr.indexOf(lat + ',') === -1) {
+    addr = addr + ', ' + lat + ',' + lng;
+  }
 
   return {
     company_name: brand,
-    company_description: str(raw?.mission_purpose) || "Centralised LPG reticulation, industrial utility pipelines and fire protection systems for residential, commercial and industrial projects across Bangladesh.",
-    company_short_description: str(raw?.eu_standards_badge_info) || "First class Titas Gas contractor, Department of Explosives approved, BERC registered.",
-    company_phone: cleanPhone(phones.phone),
-    company_email: cleanEmail(emails.general ?? emails.sales),
-    company_address: cleanAddress(raw?.primary_headquarters_address),
-    whatsapp_number: cleanWhatsApp(phones.whatsapp),
-    facebook_url: str(social.facebook),
-    twitter_url: str(social.twitter),
-    meta_description: str(raw?.mission_purpose),
-    site_meta_description: str(raw?.mission_purpose),
-    whatsapp_popup: "true",
-    copyright_year: String(new Date().getFullYear()),
-    company_latitude: coord(raw?.company_latitude, DGS_DEFAULT_LAT),
-    company_longitude: coord(raw?.company_longitude, DGS_DEFAULT_LNG),
+    company_logo: str((raw as any).company_logo),
+    company_logo_public_id: str((raw as any).company_logo_public_id),
+    site_favicon: str((raw as any).site_favicon) ?? str((raw as any).company_logo),
+    site_favicon_public_id: str((raw as any).site_favicon_public_id),
+    company_description: str((raw as any).mission_purpose) ?? str((raw as any).company_description),
+    company_short_description: str((raw as any).eu_standards_badge_info) ?? str((raw as any).mission_purpose) ?? str((raw as any).company_short_description),
+    company_phone: str(phones.phone) ?? str((raw as any).company_phone),
+    company_email: str(emails.general) ?? str(emails.sales) ?? str((raw as any).company_email),
+    company_address: addr,
+    whatsapp_number: str(phones.whatsapp) ?? str((raw as any).whatsapp_number),
+    facebook_url: str(social.facebook) ?? str((raw as any).facebook_url),
+    instagram_url: str(social.instagram) ?? str((raw as any).instagram_url),
+    twitter_url: str(social.twitter) ?? str((raw as any).twitter_url),
+    footer_text: str((raw as any).footer_text),
+    copyright_year: str((raw as any).copyright_year) ?? String(new Date().getFullYear()),
+    meta_description: str((raw as any).mission_purpose) ?? str((raw as any).meta_description),
+    site_meta_title: str((raw as any).site_meta_title),
+    site_meta_description: str((raw as any).site_meta_description) ?? str((raw as any).mission_purpose),
+    site_meta_keywords: str((raw as any).site_meta_keywords),
+    site_og_image: str((raw as any).site_og_image),
+    canonical_url: str((raw as any).canonical_url),
+    whatsapp_popup: str(phones.whatsapp) ? "true" : str((raw as any).whatsapp_popup),
+    terms_and_conditions: str((raw as any).terms_and_conditions),
+    privacy_policy: str((raw as any).privacy_policy),
+    emi_enabled: str((raw as any).emi_enabled),
+    emi_interest_rate: str((raw as any).emi_interest_rate),
+    emi_min_amount: str((raw as any).emi_min_amount),
+    emi_tenures: str((raw as any).emi_tenures),
+    emi_tenure_rates: str((raw as any).emi_tenure_rates),
+    hide_advanced_routes: str((raw as any).hide_advanced_routes),
   };
 }

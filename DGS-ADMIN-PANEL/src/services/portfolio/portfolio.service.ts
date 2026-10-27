@@ -5,6 +5,10 @@ import {
   deletePortfolioAction,
   deletePortfolioCategoryAction,
   listPortfolioCategoriesAction,
+  createPortfolioAreaAction,
+  deletePortfolioAreaAction,
+  listPortfolioAreasAction,
+  updatePortfolioAreaAction,
   listPortfoliosAction,
   savePortfolioAction,
   togglePortfolioFeaturedAction,
@@ -110,6 +114,20 @@ export const updatePortfolioCategory = (
 
 export const deletePortfolioCategory = (id: number | string): Promise<ActionResult> =>
   deletePortfolioCategoryAction(id);
+
+export const listPortfolioAreas = (page = 1, limit = 6): Promise<ActionResult> =>
+  listPortfolioAreasAction(page, limit);
+
+export const createPortfolioArea = (name: string): Promise<ActionResult> =>
+  createPortfolioAreaAction(name);
+
+export const updatePortfolioArea = (
+  id: number | string,
+  name: string
+): Promise<ActionResult> => updatePortfolioAreaAction(id, name);
+
+export const deletePortfolioArea = (id: number | string): Promise<ActionResult> =>
+  deletePortfolioAreaAction(id);
 
 export const uploadPortfolioImage = (
   formData: FormData
