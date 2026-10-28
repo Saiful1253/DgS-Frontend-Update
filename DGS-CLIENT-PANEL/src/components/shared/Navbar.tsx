@@ -37,14 +37,14 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all backdrop-blur-xl border-b border-white/10 bg-slate-950/90
+        className={`fixed top-0 left-0 right-0 z-50 transition-all backdrop-blur-xl border-b border-slate-200/80 bg-white/95
       ${shrink ? "h-14 shadow-xl" : "h-16 xl:h-20 shadow-md"}`}
       >
         <div className="container mx-auto px-4 h-full flex items-center justify-between">
           {/* Logo */}
           <Link
             href="/"
-            className="flex items-center gap-3 text-xl lg:text-2xl font-black text-white uppercase tracking-wider transition-colors hover:text-primary"
+            className="flex items-center gap-3 text-xl lg:text-2xl font-black text-slate-900 uppercase tracking-wider transition-colors hover:text-primary"
           >
             {siteConfig.company_logo ? (
               <Image
@@ -58,7 +58,7 @@ export default function Navbar() {
                 }`}
               />
             ) : (
-              <span className="font-extrabold tracking-tight text-white">
+              <span className="font-extrabold tracking-tight text-slate-900">
                 {siteConfig.company_name || "MilanoVA"}
               </span>
             )}
@@ -75,7 +75,7 @@ export default function Navbar() {
                   className={`text-xs font-bold uppercase tracking-widest transition-all duration-300 ${
                     active
                       ? "text-primary border-b-2 border-primary pb-1"
-                      : "text-slate-300 hover:text-white"
+                      : "text-slate-700 hover:text-primary"
                   }`}
                 >
                   {l.label}
@@ -98,7 +98,7 @@ export default function Navbar() {
             {/* Mobile menu toggle */}
             <button
               onClick={() => setOpen(!open)}
-              className="xl:hidden p-2 text-slate-300 hover:text-white"
+              className="xl:hidden p-2 text-slate-700 hover:text-primary"
               aria-label="Toggle Navigation"
             >
               {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -109,21 +109,21 @@ export default function Navbar() {
 
       {/* Mobile Drawer */}
       {open && (
-        <div className="fixed inset-0 top-16 z-40 bg-slate-950/95 backdrop-blur-2xl xl:hidden p-6 flex flex-col justify-between">
+        <div className="fixed inset-0 top-16 z-40 bg-white/95 backdrop-blur-2xl xl:hidden p-6 flex flex-col justify-between border-b border-slate-200 shadow-xl">
           <div className="space-y-4">
             {navLinks.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="block text-lg font-bold text-slate-200 hover:text-primary uppercase tracking-wider"
+                className="block text-lg font-bold text-slate-800 hover:text-primary uppercase tracking-wider"
               >
                 {l.label}
               </Link>
             ))}
           </div>
 
-          <div className="pt-6 border-t border-slate-800 space-y-3">
+          <div className="pt-6 border-t border-slate-200 space-y-3">
             <LanguageSwitcher fullWidth />
             <Link href="/contact" onClick={() => setOpen(false)}>
               <Button className="w-full h-11 text-xs font-bold uppercase tracking-wider bg-primary hover:bg-primary-hover text-white rounded-xl flex items-center justify-center gap-2">

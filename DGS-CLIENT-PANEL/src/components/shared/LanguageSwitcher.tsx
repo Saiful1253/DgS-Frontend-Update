@@ -55,13 +55,13 @@ export default function LanguageSwitcher({
         aria-expanded={open}
         aria-label="Change language"
         className={cn(
-          "flex items-center gap-2 h-9 px-3 rounded-lg border border-white/20 text-slate-200 hover:text-white hover:border-white/40 hover:bg-white/5 transition-all text-xs font-bold uppercase tracking-wider cursor-pointer",
+          "flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-300 text-slate-800 hover:text-primary hover:border-primary/50 hover:bg-slate-50 transition-all text-xs font-bold uppercase tracking-wider cursor-pointer",
           fullWidth && "w-full h-11 justify-center",
         )}
       >
-        <Globe className="w-4 h-4" />
+        <Globe className="w-4 h-4 text-slate-600" />
         <span>{current.label}</span>
-        <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", open && "rotate-180")} />
+        <ChevronDown className={cn("w-3.5 h-3.5 text-slate-500 transition-transform", open && "rotate-180")} />
       </button>
 
       {open && (
@@ -69,7 +69,7 @@ export default function LanguageSwitcher({
           role="listbox"
           aria-label="Select language"
           className={cn(
-            "absolute z-50 mt-2 overflow-hidden rounded-lg border border-slate-700 bg-slate-900 shadow-xl",
+            "absolute z-50 mt-2 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl py-1",
             fullWidth ? "left-0 right-0" : "right-0 min-w-[10rem]",
           )}
         >
@@ -84,8 +84,8 @@ export default function LanguageSwitcher({
                 setOpen(false);
               }}
               className={cn(
-                "w-full flex items-center justify-between gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors hover:bg-white/5 cursor-pointer",
-                locale === option.value ? "text-white" : "text-slate-300",
+                "w-full flex items-center justify-between gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors hover:bg-slate-100 cursor-pointer",
+                locale === option.value ? "text-primary font-bold bg-slate-50" : "text-slate-700",
               )}
             >
               <span>{option.label}</span>
